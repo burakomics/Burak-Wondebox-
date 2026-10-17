@@ -1,1419 +1,368 @@
-<!-- Burak Athlete Pipeline -->
-<title>Burak Athlete Pipeline</title>
-<style>
-  :root{
-    --sb-bg:#111827; --sb-fg:#cbd5e1; --sb-fg-dim:#64748b; --sb-active:#1f2937;
-    --bg:#f6f7f9; --surface:#ffffff; --border:#e3e6eb; --fg:#1a1d23; --muted:#667085;
-    --accent:#0d9488; --accent-soft:#e6f5f3;
-    --good:#16a34a; --good-soft:#eaf7ee;
-    --warning:#d97706; --warning-soft:#fdf3e4;
-    --critical:#dc2626; --critical-soft:#fdeaea;
-    --info:#2563eb; --info-soft:#e9f0fe;
-    --shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
-  }
-  *{ box-sizing:border-box; }
-  body{
-    background:var(--bg); color:var(--fg); margin:0;
-    font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
-    font-size:14px;
-  }
-  .app{ display:flex; min-height:100vh; }
 
-  .sidebar{ width:230px; flex:0 0 auto; background:var(--sb-bg); color:var(--sb-fg); padding:18px 12px; position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto; }
-  .sb-brand{ padding:6px 10px 18px; }
-  .sb-brand .name{ font-weight:600; color:#fff; font-size:14px; line-height:1.3; }
-  .sb-brand .sub{ font-size:11px; color:var(--sb-fg-dim); margin-top:3px; }
-  .sb-group-label{ font-size:10px; letter-spacing:.06em; color:var(--sb-fg-dim); padding:14px 10px 6px; text-transform:uppercase; }
-  .sb-nav{ display:flex; flex-direction:column; gap:2px; }
-  .sb-item{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:7px; cursor:pointer; font-size:13px; color:var(--sb-fg); border:none; background:none; text-align:left; width:100%; font-family:inherit; }
-  .sb-item svg{ width:16px; height:16px; flex:0 0 auto; opacity:.8; }
-  .sb-item:hover{ background:rgba(255,255,255,.05); }
-  .sb-item.active{ background:var(--sb-active); color:#fff; }
-  .sb-item.active svg{ opacity:1; color:var(--accent); }
-  .sb-foot{ margin-top:16px; padding:10px; font-size:10.5px; color:var(--sb-fg-dim); border-top:1px solid rgba(255,255,255,.08); }
-
-  .content{ flex:1 1 auto; min-width:0; padding:22px 28px 60px; max-width:1060px; }
-  .topbar{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
-  .topbar h1{ font-size:19px; font-weight:600; margin:0; }
-  .topbar p{ margin:3px 0 0; color:var(--muted); font-size:12.5px; }
-  [hidden]{ display:none !important; }
-
-  .kpi-row{ display:grid; grid-template-columns:repeat(5,1fr) 1.15fr; gap:12px; margin-bottom:20px; }
-  .kpi{ display:flex; gap:12px; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px; padding:14px 16px; box-shadow:var(--shadow); }
-  .kpi.critical{ border-left-color:var(--critical); } .kpi.warning{ border-left-color:var(--warning); }
-  .kpi.info{ border-left-color:var(--info); } .kpi.good{ border-left-color:var(--good); }
-  .kpi-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; background:var(--accent-soft); color:var(--accent); }
-  .kpi.critical .kpi-icon{ background:var(--critical-soft); color:var(--critical); }
-  .kpi.warning .kpi-icon{ background:var(--warning-soft); color:var(--warning); }
-  .kpi.info .kpi-icon{ background:var(--info-soft); color:var(--info); }
-  .kpi.good .kpi-icon{ background:var(--good-soft); color:var(--good); }
-  .kpi .k-label{ font-size:11px; color:var(--muted); margin-bottom:4px; }
-  .kpi .k-value{ font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; line-height:1.1; }
-  .kpi .k-sub{ font-size:10.5px; color:var(--muted); margin-top:3px; }
-  .kpi.usp{ cursor:pointer; border:none; background:linear-gradient(135deg,#0d9488,#0f766e); box-shadow:0 4px 14px rgba(13,148,136,.28); position:relative; overflow:hidden; }
-  .kpi.usp::after{ content:"USP"; position:absolute; top:7px; right:9px; font-family:'IBM Plex Mono',monospace; font-size:8.5px; font-weight:700; letter-spacing:.06em; color:rgba(255,255,255,.75); }
-  .kpi.usp .kpi-icon{ background:rgba(255,255,255,.18); color:#fff; }
-  .kpi.usp .k-label{ color:rgba(255,255,255,.8); }
-  .kpi.usp .k-value{ color:#fff; }
-  .kpi.usp .k-sub{ color:rgba(255,255,255,.75); }
-  .kpi.usp:hover{ box-shadow:0 6px 18px rgba(13,148,136,.4); }
-  @media (max-width:980px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
-  @media (max-width:640px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
-
-  .section-icon{ width:30px; height:30px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent); vertical-align:middle; margin-right:8px; }
-  .card h2{ display:flex; align-items:center; }
-
-  .donut-row{ display:flex; align-items:center; gap:22px; }
-  .donut-legend{ flex:1 1 auto; display:flex; flex-direction:column; gap:9px; min-width:0; }
-  .legend-item{ display:flex; align-items:center; gap:9px; font-size:12px; }
-  .legend-dot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
-  .legend-item .ln{ flex:1 1 auto; color:var(--fg); }
-  .legend-item .lv{ font-family:'IBM Plex Mono',monospace; color:var(--muted); font-size:11.5px; }
-  @media (max-width:520px){ .donut-row{ flex-direction:column; align-items:flex-start; } }
-
-  .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:18px; box-shadow:var(--shadow); }
-  .card h2{ font-size:15px; font-weight:600; margin:0 0 4px; }
-  .card .desc{ color:var(--muted); font-size:12.5px; margin:0 0 16px; }
-
-  .flow{ display:flex; align-items:center; flex-wrap:wrap; gap:0; }
-  .flow-step{ background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:12px 14px; min-width:124px; text-align:center; }
-  .flow-step .fn{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--accent); margin-bottom:4px; }
-  .flow-step .ft{ font-size:12.5px; font-weight:600; }
-  .flow-step .fd{ font-size:10.5px; color:var(--muted); margin-top:3px; line-height:1.3; }
-  .flow-arrow{ flex:0 0 auto; width:22px; height:1px; background:var(--border); position:relative; margin:0 2px; }
-  .flow-arrow::after{ content:""; position:absolute; right:0; top:-3px; border:4px solid transparent; border-left-color:var(--border); }
-  @media (max-width:820px){ .flow{ flex-direction:column; align-items:stretch; } .flow-arrow{ width:1px; height:16px; margin:2px 0 2px 22px; } .flow-arrow::after{ right:-3px; top:0; border-left-color:transparent; border-top-color:var(--border); } }
-
-  /* ingestion */
-  .dropzone{ border:1.5px dashed var(--border); border-radius:10px; padding:26px; text-align:center; background:var(--bg); }
-  .dropzone svg{ width:28px; height:28px; color:var(--muted); margin-bottom:8px; }
-  .dropzone .dz-file{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--fg); margin-top:6px; }
-  .dropzone .dz-hint{ font-size:11.5px; color:var(--muted); margin-top:4px; }
-  .ingest-steps{ margin-top:16px; display:flex; flex-direction:column; gap:8px; }
-  .ingest-step{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); opacity:.4; }
-  .ingest-step.active{ opacity:1; color:var(--fg); }
-  .ingest-step.done{ opacity:1; color:var(--good); }
-  .ingest-step .dotc{ width:7px; height:7px; border-radius:50%; background:var(--border); flex:0 0 auto; }
-  .ingest-step.active .dotc{ background:var(--accent); }
-  .ingest-step.done .dotc{ background:var(--good); }
-
-  /* population table */
-  table.pop{ width:100%; border-collapse:collapse; font-size:12.5px; }
-  table.pop th{ text-align:left; font-size:10.5px; letter-spacing:.03em; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--border); cursor:pointer; user-select:none; }
-  table.pop th:hover{ color:var(--fg); }
-  table.pop td{ padding:10px; border-bottom:1px solid var(--border); }
-  table.pop tr:last-child td{ border-bottom:none; }
-  table.pop tr:hover td{ background:var(--bg); cursor:pointer; }
-
-  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  @media (max-width:820px){ .two-col{ grid-template-columns:1fr; } }
-  .bar-list{ display:flex; flex-direction:column; gap:11px; }
-  .bar-row .br-top{ display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; }
-  .bar-row .br-top .n{ font-family:'IBM Plex Mono',monospace; color:var(--muted); }
-  .bar-track{ height:8px; background:var(--bg); border-radius:999px; overflow:hidden; }
-  .bar-fill{ height:100%; border-radius:999px; }
-  .bar-fill.critical{ background:var(--critical); } .bar-fill.warning{ background:var(--warning); }
-  .bar-fill.info{ background:var(--info); } .bar-fill.good{ background:var(--good); } .bar-fill.muted{ background:#c7cbd3; }
-
-  .filter-row{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-  .filter-row input[type=text]{ flex:1 1 220px; font:inherit; font-size:12.5px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--fg); }
-  .filter-row select{ font:inherit; font-size:12.5px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--fg); }
-  .filter-row input:focus, .filter-row select:focus{ outline:2px solid var(--accent); outline-offset:-1px; }
-
-  .header-strip{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 28px; border-bottom:1px solid var(--border); background:var(--surface); font-size:11.5px; color:var(--muted); }
-  .header-strip .hs-left{ display:flex; align-items:center; gap:8px; }
-  .header-strip .env-badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; color:var(--accent); background:var(--accent-soft); padding:2px 8px; border-radius:999px; }
-  .main-col{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
-
-  /* category split panels */
-  .panel-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-  @media (max-width:820px){ .panel-grid{ grid-template-columns:1fr; } }
-  .panel-card{ background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--border); border-radius:12px; padding:18px; box-shadow:var(--shadow); }
-  .panel-card.critical{ border-top-color:var(--critical); } .panel-card.warning{ border-top-color:var(--warning); }
-  .panel-card .pc-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:10px; }
-  .panel-card .pc-title-wrap{ display:flex; align-items:center; gap:10px; }
-  .panel-card .pc-icon{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
-  .panel-card.critical .pc-icon{ background:var(--critical-soft); color:var(--critical); }
-  .panel-card.warning .pc-icon{ background:var(--warning-soft); color:var(--warning); }
-  .panel-card h3{ font-size:13.5px; font-weight:600; margin:0; }
-  .panel-card .pc-sub{ font-size:10.5px; color:var(--muted); margin-top:2px; }
-  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
-  .chip{ font-size:11px; background:var(--bg); border:1px solid var(--border); border-radius:999px; padding:4px 9px 4px 10px; color:var(--muted); display:inline-flex; align-items:center; gap:5px; }
-  .chip .cn{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; background:var(--critical); color:#fff; border-radius:999px; width:15px; height:15px; display:inline-flex; align-items:center; justify-content:center; }
-  .pc-foot{ border-top:1px solid var(--border); padding-top:12px; margin-top:4px; }
-  .pc-foot .pc-foot-label{ font-size:10px; letter-spacing:.03em; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
-  .name-chip-row{ display:flex; flex-wrap:wrap; gap:6px; }
-  .name-chip{ font:inherit; font-size:11px; background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:5px 9px; cursor:pointer; color:var(--fg); }
-  .name-chip:hover{ border-color:var(--accent); color:var(--accent); }
-  .name-chip.more{ color:var(--muted); cursor:default; }
-  .name-chip.more:hover{ border-color:var(--border); color:var(--muted); }
-
-  .badge{ display:inline-block; font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:999px; }
-  .badge.good{ background:var(--good-soft); color:var(--good); } .badge.warning{ background:var(--warning-soft); color:var(--warning); }
-  .badge.critical{ background:var(--critical-soft); color:var(--critical); } .badge.info{ background:var(--info-soft); color:var(--info); }
-
-  .cohort-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-  @media (max-width:860px){ .cohort-grid{ grid-template-columns:1fr; } }
-  .cohort-card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; box-shadow:var(--shadow); display:flex; flex-direction:column; }
-  .cohort-card.draft{ border-style:dashed; box-shadow:none; background:var(--bg); justify-content:center; align-items:center; text-align:center; min-height:200px; }
-  .cohort-card .cc-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px; }
-  .cohort-card .cc-title-wrap{ display:flex; align-items:center; gap:10px; }
-  .cohort-card .cc-icon{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
-  .cohort-card.critical .cc-icon{ background:var(--critical-soft); color:var(--critical); }
-  .cohort-card.warning .cc-icon{ background:var(--warning-soft); color:var(--warning); }
-  .cohort-card.info .cc-icon{ background:var(--info-soft); color:var(--info); }
-  .cohort-card h3{ font-size:14px; font-weight:600; margin:0; }
-  .cohort-card .cc-panel{ font-size:10.5px; color:var(--muted); margin-top:2px; }
-  .cohort-card .cc-stat{ display:flex; align-items:baseline; gap:6px; margin:12px 0 10px; }
-  .cohort-card .cc-stat .csv{ font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:700; }
-  .cohort-card .cc-stat .csl{ font-size:11.5px; color:var(--muted); }
-  .cohort-card .cc-trigger{ font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:12px; }
-  .cohort-card .cc-trigger b{ color:var(--fg); }
-
-  .predict-intro{ background:linear-gradient(135deg,var(--accent-soft),var(--surface)); border:1px solid var(--accent); border-radius:10px; padding:16px 20px; margin-bottom:20px; }
-  .predict-steps{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-  .ps-step{ display:flex; gap:10px; align-items:flex-start; flex:1 1 210px; }
-  .ps-num{ width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
-  .ps-step div{ font-size:11.5px; color:var(--muted); line-height:1.45; }
-  .ps-step div b{ display:block; font-size:12.5px; color:var(--fg); margin-bottom:2px; }
-  .ps-arrow{ color:var(--accent); font-size:16px; flex:0 0 auto; opacity:.6; }
-  @media (max-width:760px){ .predict-steps{ flex-direction:column; align-items:stretch; } .ps-arrow{ display:none; } }
-  .subhead{ display:flex; align-items:baseline; justify-content:space-between; margin:26px 0 12px; }
-  .subhead:first-of-type{ margin-top:0; }
-  .subhead h2{ font-size:15px; margin:0; }
-  .subhead span{ font-size:11.5px; color:var(--muted); }
-
-  .leg-row{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
-  .leg-pill{ flex:1 1 0; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:7px 10px; font-size:11.5px; font-weight:600; color:var(--fg); }
-  .leg-pill em{ display:block; font-style:normal; font-weight:400; font-size:10px; color:var(--muted); margin-top:2px; }
-  .leg-plus{ flex:0 0 auto; font-size:13px; color:var(--muted); font-weight:700; }
-
-  .predict-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-  @media (max-width:860px){ .predict-grid{ grid-template-columns:1fr; } }
-  .predict-card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow); }
-  .pt-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2px; }
-  .pt-head b{ font-size:13.5px; }
-  .pt-sport{ font-size:11px; color:var(--muted); margin-left:7px; }
-  .pt-marker{ font-size:11px; color:var(--muted); margin-bottom:8px; }
-  .pt-weeks{ display:flex; justify-content:space-between; font-size:9.5px; color:var(--muted); padding:0 14px; margin-top:2px; }
-  .pt-lead{ border-top:1px solid var(--border); margin-top:12px; padding-top:10px; }
-  .lead-badge{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; color:#fff; background:var(--warning); border-radius:6px; padding:3px 9px; margin-bottom:6px; }
-  .pt-lead-text{ display:block; font-size:11.5px; color:var(--fg); line-height:1.5; }
-  .pt-lead-sub{ display:block; font-size:10.5px; color:var(--muted); margin-top:3px; }
-
-  .conf-ladder{ display:flex; align-items:center; margin:2px 0 14px; }
-  .cl-step{ display:flex; flex-direction:column; align-items:center; text-align:center; flex:0 0 auto; width:76px; }
-  .cl-dot{ width:22px; height:22px; border-radius:50%; background:var(--bg); border:2px solid var(--border); color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-bottom:4px; }
-  .cl-step .cl-label{ font-size:10px; font-weight:600; color:var(--muted); }
-  .cl-step .cl-sub{ font-size:9px; color:var(--muted); margin-top:1px; }
-  .cl-step.hit .cl-dot{ background:var(--accent); border-color:var(--accent); color:#fff; }
-  .cl-step.hit .cl-label{ color:var(--fg); }
-  .cl-step.hit.final .cl-dot{ background:var(--critical); border-color:var(--critical); }
-  .cl-line{ flex:1 1 auto; height:2px; background:var(--border); margin-top:-16px; }
-  .cl-line.hit{ background:var(--accent); }
-
-  .cc-related{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px; padding-top:10px; border-top:1px solid var(--border); font-size:10.5px; color:var(--muted); }
-  .cc-related .chip{ font-size:10.5px; padding:3px 8px; }
-
-  .usp-card{ border:1.5px solid var(--accent); background:linear-gradient(180deg,var(--accent-soft) 0%,var(--surface) 140px); }
-  .usp-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
-  .usp-eyebrow{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-bottom:4px; }
-  .usp-head h2{ margin:0 0 6px; }
-  .usp-head .desc{ margin:0; max-width:62ch; }
-  .usp-link{ flex:0 0 auto; display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:12.5px; font-weight:600; color:#fff; background:var(--accent); border:none; border-radius:8px; padding:9px 14px; cursor:pointer; white-space:nowrap; }
-  .usp-link:hover{ background:#0c7d72; }
-  .usp-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
-  .usp-stat{ background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:12px 14px; }
-  .usp-stat .us-value{ font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:700; }
-  .usp-stat .us-label{ font-size:11px; color:var(--muted); margin-top:2px; }
-  @media (max-width:760px){ .usp-stats{ grid-template-columns:1fr; } }
-
-  .hero{ background:linear-gradient(135deg,#0f766e,#0d9488 55%,#0c8e82); border-radius:14px; padding:26px 28px; margin-bottom:22px; color:#fff; box-shadow:0 8px 24px rgba(13,148,136,.25); }
-  .hero-eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.75); margin-bottom:8px; }
-  .hero h1{ font-size:23px; margin:0 0 8px; max-width:30ch; line-height:1.25; }
-  .hero p{ margin:0 0 16px; font-size:13px; color:rgba(255,255,255,.88); max-width:70ch; line-height:1.55; }
-  .hero-pills{ display:flex; flex-wrap:wrap; gap:8px; }
-  .hero-pill{ background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.3); border-radius:999px; padding:6px 13px; font-size:11.5px; font-weight:600; }
-
-  .note-box{ display:flex; gap:10px; align-items:flex-start; background:var(--accent-soft); border:1px solid var(--accent); border-radius:9px; padding:12px 16px; margin-bottom:18px; font-size:12px; color:var(--fg); line-height:1.55; }
-  .note-box .nb-icon{ flex:0 0 auto; width:26px; height:26px; border-radius:7px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; }
-  .note-box b{ color:var(--accent); }
-
-  details.howworks{ margin-top:4px; }
-  details.howworks summary{ cursor:pointer; font-size:12.5px; font-weight:600; color:var(--accent); list-style:none; display:inline-flex; align-items:center; gap:6px; padding:4px 0; }
-  details.howworks summary::-webkit-details-marker{ display:none; }
-  details.howworks summary::before{ content:"+"; font-family:'IBM Plex Mono',monospace; font-weight:700; width:16px; height:16px; border-radius:50%; border:1px solid var(--accent); display:inline-flex; align-items:center; justify-content:center; font-size:11px; }
-  details.howworks[open] summary::before{ content:"\2212"; }
-  details.howworks .hw-body{ font-size:12px; color:var(--muted); line-height:1.6; max-width:78ch; margin:8px 0 4px 22px; }
-  details.howworks .hw-body b{ color:var(--fg); }
-
-  .seg{ display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:18px; }
-  .seg button{ font:inherit; font-size:12.5px; padding:7px 14px; border:none; background:var(--surface); color:var(--muted); cursor:pointer; }
-  .seg button.active{ background:var(--accent); color:#fff; }
-  .rr-row{ margin-bottom:16px; }
-  .rr-label{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
-  .rr-label b{ color:var(--fg); }
-  .rr-track{ position:relative; height:22px; background:var(--bg); border:1px solid var(--border); border-radius:6px; }
-  .rr-band{ position:absolute; top:0; bottom:0; border-radius:5px; }
-  .rr-band.standard{ background:#dbe1ea; }
-  .rr-band.cohort{ background:var(--accent-soft); border:1px solid var(--accent); }
-  .rr-mark{ position:absolute; top:-6px; width:2px; height:34px; background:var(--critical); }
-  .rr-mark span{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--critical); font-weight:600; white-space:nowrap; }
-  .rr-callout{ display:flex; gap:10px; align-items:center; background:var(--critical-soft); border:1px solid var(--critical); border-radius:8px; padding:10px 14px; margin-top:18px; font-size:12.5px; }
-  .rr-callout b{ color:var(--critical); }
-
-  .mode-switch{ display:flex; gap:6px; margin-bottom:18px; }
-  .mode-btn{ font:inherit; font-size:12.5px; padding:7px 14px; border-radius:7px; border:1px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; }
-  .mode-btn.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
-
-  .tabs{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
-  .tab{ font:inherit; font-size:12.5px; padding:6px 12px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; }
-  .tab.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600; }
-
-  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-  .patient-meta{ font-size:12.5px; color:var(--muted); }
-  .patient-meta b{ color:var(--fg); }
-  .patient-meta a{ color:var(--accent); cursor:pointer; font-weight:600; }
-  button.run{ font:inherit; font-weight:600; font-size:12.5px; color:#fff; background:var(--accent); border:none; border-radius:8px; padding:9px 16px; cursor:pointer; display:flex; align-items:center; gap:7px; }
-  button.run:disabled{ opacity:.5; }
-  button.run svg{ width:12px; height:12px; }
-
-  .status-bar{ display:flex; align-items:center; gap:9px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:9px 13px; margin-bottom:16px; font-size:12px; color:var(--muted); }
-  .status-bar .sb-dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); animation:pulse 1.3s ease-in-out infinite; }
-  @media (prefers-reduced-motion: reduce){ .status-bar .sb-dot{ animation:none; } }
-  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
-  .status-bar.done{ background:var(--good-soft); border-color:var(--good); color:var(--fg); }
-  .status-bar.done .sb-dot{ background:var(--good); animation:none; }
-
-  .pipeline{ display:flex; flex-direction:column; gap:12px; }
-  .layer{ border:1px solid var(--border); border-radius:10px; background:var(--surface); padding:16px 18px; box-shadow:var(--shadow); opacity:0; transform:translateY(6px); transition:opacity .35s ease, transform .35s ease; }
-  .layer.visible{ opacity:1; transform:none; }
-  .layer-head{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
-  .layer-n{ width:24px; height:24px; border-radius:7px; background:var(--accent-soft); color:var(--accent); font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
-  .layer-head h3{ font-size:14px; font-weight:600; margin:0; }
-  .layer-sub{ color:var(--muted); font-size:12px; margin:0 0 12px 34px; }
-  .layer-body{ margin-left:34px; }
-
-  .pill{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; padding:3px 8px; border-radius:5px; }
-  .pill.good{ background:var(--good-soft); color:var(--good); } .pill.warning{ background:var(--warning-soft); color:var(--warning); }
-  .pill.critical{ background:var(--critical-soft); color:var(--critical); } .pill.info{ background:var(--info-soft); color:var(--info); }
-
-  table.data{ width:100%; border-collapse:collapse; font-size:12.5px; }
-  table.data th,table.data td{ text-align:left; padding:7px 9px; border-bottom:1px solid var(--border); }
-  table.data th{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); font-weight:600; }
-  table.data td.num,table.data th.num{ text-align:right; font-variant-numeric:tabular-nums; font-family:'IBM Plex Mono',monospace; }
-  table.data tr.flagged td{ background:var(--warning-soft); }
-  table.data tr.flagged.crit td{ background:var(--critical-soft); }
-  table.data tr.flagged.info td{ background:var(--info-soft); }
-  table.data tr:last-child td{ border-bottom:none; }
-  .table-wrap{ overflow-x:auto; }
-
-  .split-row{ display:flex; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); }
-  .split-row:last-child{ border-bottom:none; }
-  .split-dot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
-  .split-row .sr-name{ flex:1 1 auto; font-size:12.5px; font-weight:600; }
-  .split-row .sr-count{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted); }
-
-  .flag-row{ display:flex; gap:9px; align-items:flex-start; padding:7px 0; }
-  .dot8{ width:7px; height:7px; border-radius:50%; margin-top:4px; flex:0 0 auto; }
-  .dot8-critical{ background:var(--critical); } .dot8-warning{ background:var(--warning); }
-  .dot8-info{ background:var(--info); } .dot8-good{ background:var(--good); } .dot8-muted{ background:#c7cbd3; }
-  .flag-row p{ margin:0; font-size:12.5px; line-height:1.5; }
-
-  .verdict{ border-radius:8px; padding:10px 14px; margin-bottom:10px; }
-  .verdict.critical{ background:var(--critical-soft); } .verdict.warning{ background:var(--warning-soft); }
-  .verdict.good{ background:var(--good-soft); } .verdict.info{ background:var(--info-soft); }
-  .verdict b{ font-size:13.5px; } .verdict span{ display:block; font-size:11.5px; color:var(--muted); margin-top:2px; }
-
-  .report-card{ border-radius:8px; overflow:hidden; border:1px solid var(--border); }
-  .rc-head{ padding:10px 14px; display:flex; justify-content:space-between; align-items:center; }
-  .rc-body{ padding:12px 14px 14px; font-size:12.5px; }
-  .rc-body p{ margin:0 0 7px; color:var(--muted); line-height:1.5; }
-  .rc-body b{ color:var(--fg); }
-
-  .containers{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
-  .container{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px; box-shadow:var(--shadow); opacity:0; transform:translateY(6px); transition:opacity .3s ease, transform .3s ease; }
-  .container.visible{ opacity:1; transform:none; }
-  .c-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-  .c-dot{ width:8px; height:8px; border-radius:50%; }
-  .c-title{ font-weight:600; font-size:12px; flex:1 1 auto; }
-  .c-count{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); background:var(--bg); padding:1px 7px; border-radius:999px; }
-  .patient-btn{ display:block; width:100%; text-align:left; font:inherit; background:var(--bg); border:1px solid transparent; border-radius:7px; padding:8px 9px; margin-bottom:6px; cursor:pointer; }
-  .patient-btn:hover{ border-color:var(--accent); }
-  .patient-btn .pn{ font-weight:600; font-size:12px; }
-  .patient-btn .pm{ color:var(--muted); font-size:10.5px; margin-top:1px; }
-  .patient-btn .pv{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; margin-top:4px; color:var(--muted); }
-  .c-empty{ color:var(--muted); font-size:11.5px; font-style:italic; }
-</style>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Burak Cloud Wonder Box</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
+<style>
+/* Layout: app shell. Dark sidebar (products + sections), sticky top bar, content area of panels. One section visible at a time. */
+:root{
+  --bg:#EFF4F5; --panel:#FFFFFF; --panel2:#F5F8F9; --ink:#10232A; --ink2:#4B6168; --ink3:#7B8E93; --line:#DCE5E7;
+  --accent:#0E7C86; --accent-ink:#FFFFFF; --saffron:#B4720C; --good:#2B8253; --warn:#B0731A; --crit:#BC3A2E; --blue:#3567C4; --violet:#6F5BC9;
+  --side:#0B262C; --side-ink:#CFE0E3; --side-ink2:#7FA3A9; --side-hi:#143B43;
+  --f-display:"Plus Jakarta Sans","Inter",system-ui,sans-serif; --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --sh:0 1px 2px rgba(16,40,48,.05),0 10px 26px -18px rgba(16,40,48,.25);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0A1316; --panel:#111D21; --panel2:#16252A; --ink:#E2ECEE; --ink2:#9DB1B6; --ink3:#6E848A; --line:#22353B;
+  --accent:#4BC0C9; --accent-ink:#04181B; --saffron:#E5A445; --good:#57BC82; --warn:#E2A54B; --crit:#E8705F; --blue:#7DA0EA; --violet:#A796EC;
+  --side:#071619; --side-ink:#C6D8DB; --side-ink2:#6D9097; --side-hi:#10313A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0A1316; --panel:#111D21; --panel2:#16252A; --ink:#E2ECEE; --ink2:#9DB1B6; --ink3:#6E848A; --line:#22353B;
+  --accent:#4BC0C9; --accent-ink:#04181B; --saffron:#E5A445; --good:#57BC82; --warn:#E2A54B; --crit:#E8705F; --blue:#7DA0EA; --violet:#A796EC;
+  --side:#071619; --side-ink:#C6D8DB; --side-ink2:#6D9097; --side-hi:#10313A; color-scheme:dark }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14.5px/1.55 var(--f-body);font-feature-settings:"cv11","ss01";-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--f-display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-size:.92em;letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100%}
+/* sidebar */
+.side{background:var(--side);color:var(--side-ink);padding:18px 12px;display:flex;flex-direction:column;gap:16px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 6px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,#2FB6C2,#0A5560);display:grid;place-items:center;flex:none}
+.brand b{font:800 18px/1 var(--f-display);color:#fff;letter-spacing:-.02em}
+.brand b span{color:#F0B03E}
+.brand small{display:block;font-size:11px;color:var(--side-ink2);margin-top:3px}
+.sec{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--side-ink2);padding:0 8px;margin-bottom:-8px}
+.prods,.navs{display:flex;flex-direction:column;gap:2px}
+.prod,.nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:0;background:none;text-align:left;color:var(--side-ink);width:100%}
+.prod:hover,.nav:hover{background:var(--side-hi)}
+.prod i{width:8px;height:8px;border-radius:50%;flex:none}
+.prod small{margin-left:auto;font-size:10.5px;color:var(--side-ink2)}
+.prod[aria-current="true"],.nav[aria-current="page"]{background:linear-gradient(90deg,color-mix(in srgb,#2FB6C2 30%,var(--side-hi)),var(--side-hi));color:#fff}
+.nav svg{width:16px;height:16px;flex:none}
+.nav .ct{margin-left:auto;font-size:11px;padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.1)}
+.nav .ct.hot{background:#E8705F;color:#fff}
+.sidefoot{margin-top:auto;font-size:11.5px;color:var(--side-ink2);padding:0 8px;line-height:1.5}
+/* main */
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:12px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.crumb{font-size:13px;color:var(--ink2);flex:1;min-width:0}
+.crumb b{color:var(--ink)}
+.chip{font:500 11.5px var(--f-mono);padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 13px;font-weight:600;font-size:13px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.05);color:var(--accent-ink)}
+.content{padding-block:22px 40px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px;max-width:1320px;width:100%}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.ph .eb{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.ph h1{font-size:27px;font-weight:800;margin-top:3px}
+.ph p{margin:4px 0 0;color:var(--ink2);max-width:720px}
+.sim{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;background:color-mix(in srgb,var(--saffron) 15%,transparent);color:var(--saffron)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--sh);min-width:0}
+.panel>h3{font-size:15.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+.panel>h3::before{content:"";width:4px;height:15px;border-radius:3px;background:linear-gradient(var(--accent),var(--saffron))}
+.panel .sub{font-size:12.5px;color:var(--ink2);margin:2px 0 12px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.kpi{position:relative;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--kc) 7%,var(--panel)),var(--panel) 70%);border:1px solid var(--line);border-radius:13px;padding:13px 15px;box-shadow:var(--sh)}
+.kpi::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--kc)}
+.kpi small{display:block;font-size:12px;color:var(--ink2)}
+.kpi b{display:block;font:800 25px/1.15 var(--f-display);letter-spacing:-.03em;margin-top:3px}
+.kpi b em{font:600 12.5px var(--f-body);color:var(--ink2);font-style:normal;margin-left:3px}
+.kpi span{font-size:11.5px;color:var(--ink3)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.st{position:relative;padding:12px 13px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}
+.st:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--ink3);font-weight:700;z-index:1}
+.st .n{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font:800 11px var(--f-display);color:#fff;background:var(--sc)}
+.st b{display:block;font:700 14px var(--f-display);margin-top:7px}
+.st small{display:block;font-size:12px;color:var(--ink2);line-height:1.4}
+.st .v{font:700 16px var(--f-display);margin-top:6px;color:var(--sc)}
+/* site board */
+.sites{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.site{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel2)}
+.site h4{font-size:14px}
+.site p{margin:2px 0 8px;font-size:12px;color:var(--ink2)}
+.boxes{display:flex;flex-wrap:wrap;gap:6px}
+.bx{border:0;border-radius:8px;padding:5px 8px;font:600 11.5px var(--f-mono);background:color-mix(in srgb,var(--good) 14%,var(--panel));color:var(--good)}
+.bx.warn{background:color-mix(in srgb,var(--warn) 16%,var(--panel));color:var(--warn)}
+.bx.crit{background:color-mix(in srgb,var(--crit) 15%,var(--panel));color:var(--crit)}
+.bx.off{background:var(--panel);color:var(--ink3);border:1px dashed var(--line)}
+/* tables */
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:11.5px;font-weight:600;color:var(--ink2);background:color-mix(in srgb,var(--accent) 6%,var(--panel2));padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+tbody tr[aria-selected="true"] td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.r{text-align:right}
+.pill{font:600 11px/1 var(--f-body);padding:4px 9px;border-radius:99px;display:inline-block;white-space:nowrap}
+.ok{background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good)}
+.am{background:color-mix(in srgb,var(--warn) 17%,transparent);color:var(--warn)}
+.rd{background:color-mix(in srgb,var(--crit) 15%,transparent);color:var(--crit)}
+.bl{background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--blue)}
+.gr{background:var(--panel2);color:var(--ink3);border:1px solid var(--line)}
+.src{display:inline-flex;align-items:center;gap:6px}
+.src i{width:8px;height:8px;border-radius:2px}
+.score{display:inline-flex;align-items:center;gap:8px}
+.score i{display:block;width:54px;height:6px;border-radius:9px;background:var(--panel2);overflow:hidden}
+.score i em{display:block;height:100%;border-radius:9px}
+/* box detail */
+.det{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.reads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rd2{padding:10px 11px;border-radius:11px;background:var(--panel2);border-left:3px solid var(--good)}
+.rd2.watch{border-left-color:var(--warn)}.rd2.out{border-left-color:var(--crit);background:color-mix(in srgb,var(--crit) 6%,var(--panel2))}
+.rd2 small{display:block;font-size:11.5px;color:var(--ink2)}
+.rd2 b{font:700 17px var(--f-display)}
+.rd2 b em{font:500 11px var(--f-body);color:var(--ink3);font-style:normal;margin-left:2px}
+.rd2 span{display:block;font-size:11px;color:var(--ink3)}
+.rd2 svg{display:block;width:100%;height:26px;margin-top:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:0}
+.kv dt{color:var(--ink2)}.kv dd{margin:0;font-weight:600;text-align:right}
+/* events */
+.evs{display:flex;flex-direction:column;gap:10px}
+.ev{display:grid;grid-template-columns:6px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.ev .bar{align-self:stretch;border-radius:4px;background:var(--ec)}
+.ev h4{font-size:14.5px}
+.ev p{margin:2px 0 6px;font-size:12.5px;color:var(--ink2)}
+.ev .tr{display:flex;flex-wrap:wrap;gap:5px}
+.ev .tr span{font-size:11.5px;padding:2px 8px;border-radius:99px;background:var(--panel2);border:1px solid var(--line)}
+.ev .meta{text-align:right;font-size:12px;color:var(--ink3);display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.rule{padding:12px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 8%,var(--panel)),var(--panel) 70%)}
+.rule b{display:flex;align-items:center;gap:7px;font:700 14px var(--f-display)}
+.rule b i{width:9px;height:9px;border-radius:3px;background:var(--ec)}
+.rule p{margin:4px 0 0;font-size:12.5px;color:var(--ink2)}
+/* model */
+.f{font-family:var(--f-mono);font-size:13px;padding:12px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);overflow-x:auto;white-space:pre}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.steps>div{padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
+.steps b{font:700 14px var(--f-display)}.steps p{margin:4px 0 8px;font-size:12.5px;color:var(--ink2)}
+/* data link */
+.link{display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr);align-items:center;gap:10px}
+.end{padding:14px;border-radius:13px;border:1px solid var(--line);background:var(--panel2)}
+.end b{font:700 15px var(--f-display);display:block}
+.end small{font-size:12px;color:var(--ink2)}
+.wire{height:2px;background:linear-gradient(90deg,var(--accent),var(--saffron));position:relative;border-radius:2px}
+.wire::after{content:"";position:absolute;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:flow 1.6s linear infinite}
+@keyframes flow{from{left:0}to{left:calc(100% - 8px)}}
+.tog{display:flex;flex-direction:column;gap:8px}
+.tog label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-size:13.5px;cursor:pointer}
+.tog label small{display:block;color:var(--ink3);font-size:12px}
+.tog input{accent-color:var(--accent);width:16px;height:16px}
+.log{display:flex;flex-direction:column}
+.log div{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.log div:last-child{border-bottom:0}
+.code{font-family:var(--f-mono);font-size:12px;line-height:1.55;padding:12px 14px;border-radius:10px;background:#0B1F24;color:#CFE6E9;overflow-x:auto;white-space:pre}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:var(--sh);z-index:20}
+.note{font-size:12px;color:var(--ink3);margin:0}
+@media (prefers-reduced-motion:reduce){.wire::after{animation:none}}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.g3,.det{grid-template-columns:1fr}}
+@media (max-width:860px){.app{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:column;padding:12px max(16px,env(safe-area-inset-left,0px)) 10px}.navs{flex-direction:row;overflow-x:auto}.nav{width:auto;white-space:nowrap}.prods{flex-direction:row;overflow-x:auto}.prod{width:auto;white-space:nowrap}.sidefoot,.sec{display:none}.g2,.sites,.steps{grid-template-columns:1fr}.pipe{grid-template-columns:1fr 1fr}.st::after{display:none}.link{grid-template-columns:1fr}.wire{height:24px;width:2px;margin:0 auto;background:linear-gradient(var(--accent),var(--saffron))}.wire::after{display:none}}
+@media (max-width:520px){.kpis{grid-template-columns:1fr 1fr}.reads{grid-template-columns:1fr 1fr}.top,.content{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}.ph h1{font-size:23px}}
+</style>
 
+</head>
+<body>
 <div class="app">
-  <nav class="sidebar">
-    <div class="sb-brand"><div class="name">Burak Athlete Pipeline</div><div class="sub">multiomics demo console</div></div>
-    <div class="sb-nav" id="sbNav">
-      <button class="sb-item" data-view="ingestion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Ingestion</button>
-      <button class="sb-item" data-view="population"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Population dashboard</button>
-      <button class="sb-item" data-view="split"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v6"/><path d="M6 21v-8a6 6 0 0 1 12 0v8"/><circle cx="12" cy="3" r="1.6"/></svg>Category split</button>
-      <button class="sb-item" data-view="predict"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>Predictive intelligence</button>
-      <button class="sb-item" data-view="ranges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="20" y2="12"/><circle cx="9" cy="12" r="2.4"/></svg>Reference ranges</button>
-      <button class="sb-item" data-view="cohorts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><circle cx="12.5" cy="17" r="3"/></svg>Disease cohorts</button>
-      <button class="sb-item" data-view="batch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="10" x2="12" y2="20"/></svg>Batch triage</button>
-      <button class="sb-item" data-view="single"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/></svg>Patient pipeline</button>
-    </div>
-    <div class="sb-foot">Simulated data &middot; demo only</div>
-  </nav>
-
-  <div class="main-col">
-  <div class="header-strip">
-    <div class="hs-left"><span class="env-badge">DEMO ENVIRONMENT</span><span>Simulated data &middot; 20 patients loaded</span></div>
-    <div id="syncTime">Last synced just now</div>
+ <aside class="side">
+  <div class="brand"><span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 3c3.5 4.5 6 7.6 6 10.5A6 6 0 0 1 6 13.5C6 10.6 8.5 7.5 12 3z"/></svg></span><div><b>Burak <span>Cloud</span></b><small>One pipeline · many products</small></div></div>
+  <div class="sec">Products</div>
+  <div class="prods">
+   <button class="prod" type="button" data-toast="Burak Ovine opens in its own app."><i style="background:#57BC82"></i>Burak Ovine<small>sheep</small></button>
+   <button class="prod" type="button" aria-current="true"><i style="background:#4BC0C9"></i>Wonder Box<small>water</small></button>
+   <button class="prod" type="button" data-toast="Human health runs in a separate, secured project."><i style="background:#A796EC"></i>Human health<small>clinical</small></button>
   </div>
-  <main class="content">
-
-    <section id="view-ingestion">
-      <div class="hero">
-        <div class="hero-eyebrow">What makes Burak different</div>
-        <h1>We catch it before the fourth report has to.</h1>
-        <p>Standard labs compare one marker to one range. Burak compares markers to each other and to their own trend &mdash; so a developing pattern is visible from report 1 or 2, weeks before every marker has crossed its line on its own.</p>
-        <div class="hero-pills">
-          <span class="hero-pill">Cross-marker reading</span>
-          <span class="hero-pill">Flags from report 1</span>
-          <span class="hero-pill">Your own disease cohorts, defined as you go</span>
-        </div>
-      </div>
-      <div class="topbar"><div><h1>Ingestion</h1><p>Where a lab report enters the pipeline. Simulated here for test purposes.</p></div></div>
-      <div class="card">
-        <h2>Simulate a report upload</h2>
-        <p class="desc">In production this reads a lab file directly. Here, one click simulates a report arriving for Ahmed K.</p>
-        <div class="dropzone">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
-          <div class="dz-file" id="dzFile">sample_report_ahmed_k_wk4.pdf</div>
-          <div class="dz-hint">8 biomarkers &middot; week 4 panel</div>
-        </div>
-        <div class="ingest-steps" id="ingestSteps">
-          <div class="ingest-step" data-s="0"><span class="dotc"></span>File received</div>
-          <div class="ingest-step" data-s="1"><span class="dotc"></span>Parsing values</div>
-          <div class="ingest-step" data-s="2"><span class="dotc"></span>Matched to patient record</div>
-          <div class="ingest-step" data-s="3"><span class="dotc"></span>Routed to Category Split</div>
-        </div>
-        <div style="margin-top:16px;"><button class="run" id="ingestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M4 20v-3h16v3"/><path d="M9 4v16"/><path d="M15 4v16"/></svg><span id="ingestLabel">Ingest report</span></button></div>
-      </div>
-      <div class="card" id="ingestPreview" hidden>
-        <h2>Parsed values</h2>
-        <p class="desc">Exactly what Category Split receives next.</p>
-        <div id="ingestTable"></div>
-      </div>
-    </section>
-
-    <section id="view-population" hidden>
-      <div class="topbar"><div><h1>Population dashboard</h1><p>Aggregated view across every patient currently monitored.</p></div></div>
-      <div class="kpi-row" id="popKpis"></div>
-      <div class="two-col">
-        <div class="card"><h2>Status distribution</h2><p class="desc">Where each of the 20 patients currently sits.</p><div class="donut-row" id="distChart"></div></div>
-        <div class="card"><h2>Panel load</h2><p class="desc">Patients with at least one flagged marker, per biological line.</p><div class="bar-list" id="panelLoadChart"></div></div>
-      </div>
-
-      <div class="card usp-card">
-        <div class="usp-head">
-          <div><span class="usp-eyebrow">The core of the product</span><h2>Cross-marker intelligence</h2>
-          <p class="desc">Any lab reads one marker against one range. Burak reads markers against each other &mdash; so the pattern shows up by report 1 or 2, not report 4.</p></div>
-          <button class="usp-link" id="goPredictBtn">Open Predictive Intelligence<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
-        </div>
-        <div class="usp-stats" id="uspStats"></div>
-        <div class="bar-list" id="comboLoadChart"></div>
-      </div>
-
-      <div class="card">
-        <h2>All patients</h2>
-        <div class="filter-row">
-          <input type="text" id="popSearch" placeholder="Search by name or sport&hellip;">
-          <select id="popFilter">
-            <option value="">All statuses</option>
-            <option value="injury">Overreaching / Injury-Risk</option>
-            <option value="infection">Infection / Illness Risk</option>
-            <option value="fatigue">Fatigue &amp; Recovery Risk</option>
-            <option value="carotenoid">Carotenoid Deficiency</option>
-            <option value="vitd-watch">Vitamin D (watch)</option>
-            <option value="none">No active event</option>
-          </select>
-        </div>
-        <div style="overflow-x:auto;"><table class="pop" id="popTable"></table></div>
-      </div>
-    </section>
-
-    <section id="view-split" hidden>
-      <div class="topbar"><div><h1>Category split</h1><p>Every marker, sorted into its biological line before anything else happens.</p></div></div>
-      <div class="panel-grid" id="panelGrid"></div>
-      <details class="howworks">
-        <summary>How this is calculated</summary>
-        <div class="hw-body">Every marker lands in one panel &mdash; <b>Musculoskeletal &amp; Inflammation</b>, <b>Micronutrient &amp; Recovery</b>, or <b>Infection</b> &mdash; based on what it measures. These are standard clinical and sports-medicine lab groupings: CRP and Creatine Kinase for muscle damage and inflammation, Vitamin D and Ferritin for recovery and iron status, White Blood Cell Count and Procalcitonin for infection. A marker is "flagged" only when its latest reading is both outside the Burak threshold <i>and</i> has moved the wrong way since its first reading &mdash; never from a single number taken out of context.</div>
-      </details>
-    </section>
-
-    <section id="view-ranges" hidden>
-      <div class="topbar"><div><h1>Reference ranges</h1><p>Standard lab range vs. a range built from Burak's own athlete cohort.</p></div></div>
-      <div class="card">
-        <div class="seg" id="rrTabs"></div>
-        <div id="rrBody"></div>
-      </div>
-      <details class="howworks">
-        <summary>How this is calculated</summary>
-        <div class="hw-body">The "standard" band is the general-population lab range you'd see on any report. The "Burak cohort" band is built from athletes only &mdash; a fit, high-training-load population reads differently from the general public on markers like Vitamin D and Ferritin, so the same number can be unremarkable on one scale and worth a second look on the other. The markers themselves (Vitamin D, Ferritin, and the others used across this pipeline) are standard, peer-reviewed clinical biomarkers; this POC's cohort band is illustrative and would be recalibrated against Burak's real athlete population before use.</div>
-      </details>
-    </section>
-
-    <section id="view-cohorts" hidden>
-      <div class="topbar"><div><h1>Disease cohorts</h1><p>Named patterns Burak watches for. Every number updates live.</p></div></div>
-      <div class="note-box"><div class="nb-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg></div><div><b>These are the confirmed, named patterns</b> &mdash; validated when a defined group of markers moves together. "Predictive Intelligence" (next in the sidebar) tracks earlier, related signals that often lead into these same cohorts &mdash; they are not separate diagnoses, just an earlier read on the same story. This is a proof of concept: more cohorts can be named and added as we deep-dive into your data.</div></div>
-      <div class="cohort-grid" id="cohortGrid"></div>
-      <details class="howworks">
-        <summary>How this is calculated</summary>
-        <div class="hw-body">A cohort confirms only when every marker in its definition is flagged <i>together</i> &mdash; e.g. Overreaching / Injury-Risk needs Creatine Kinase, CRP and Cortisol:Testosterone all past threshold and trending the wrong way at the same time. A single flagged marker on its own is held as a lower-urgency "watch", not a confirmed cohort. The specific markers, thresholds and required combinations are set by Burak and can be recalibrated against your own outcomes data &mdash; every marker used here (CRP, Creatine Kinase, Cortisol:Testosterone, Vitamin D, Ferritin, Transferrin Saturation, White Blood Cell Count, Procalcitonin) is a standard biomarker already used in clinical and sports-medicine lab panels. This POC uses simulated thresholds for demonstration, not validated clinical cut-offs.</div>
-      </details>
-    </section>
-
-    <section id="view-predict" hidden>
-      <div class="topbar"><div><h1>Predictive intelligence</h1><p>Two reports in, Burak already knows where this is heading &mdash; not four.</p></div></div>
-      <div class="note-box"><div class="nb-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg></div><div><b>These are early, cross-panel signals &mdash; not new diagnoses.</b> They typically precede or pair with the named patterns in "Disease Cohorts" (see sidebar); the names are deliberately different because the confidence level is different. This is a proof of concept: any signal here can be promoted into its own validated, named cohort as we deep-dive into your data.</div></div>
-      <div class="predict-intro">
-        <div class="predict-steps">
-          <div class="ps-step"><span class="ps-num">1</span><div><b>Report 1 lands</b>Two markers from different panels are already compared against each other &mdash; not just one number against one range.</div></div>
-          <div class="ps-arrow">&rarr;</div>
-          <div class="ps-step"><span class="ps-num">2</span><div><b>Report 2 confirms the direction</b>Now there's a trend. Burak projects it forward and flags what it's heading toward.</div></div>
-          <div class="ps-arrow">&rarr;</div>
-          <div class="ps-step"><span class="ps-num">3</span><div><b>Reports 3 and 4 just confirm it</b>By then it's paperwork &mdash; Burak already called it.</div></div>
-        </div>
-      </div>
-
-      <div class="subhead"><h2>Composite signals</h2><span>Two panels, one pattern</span></div>
-      <div class="cohort-grid predict-grid" id="comboGrid"></div>
-
-      <div class="subhead"><h2>Prediction vs. what happened</h2><span>Called early. Checked against reality.</span></div>
-      <div class="predict-grid" id="predictTimeline"></div>
-      <details class="howworks">
-        <summary>How this is calculated</summary>
-        <div class="hw-body">Two checks run on every patient. <b>Report 1:</b> a marker counts as an early sign if it already sits on the worse side of the squad's own median for that marker &mdash; judged against peers, not a fixed cut-off. <b>Report 2:</b> if the direction from report 1 to report 2 is adverse, Burak projects that same rate of change forward to report 4; if the projection would cross the clinical threshold, the patient is flagged right there. Reports 3 and 4 are shown afterward only to check the call against what actually happened &mdash; they play no part in making the prediction itself.</div>
-      </details>
-    </section>
-
-    <section id="view-batch" hidden>
-      <div class="topbar"><div><h1>Batch triage</h1><p>20 patients, sorted automatically by what's flagged in their bloodwork.</p></div></div>
-      <div class="toolbar">
-        <div class="patient-meta" id="batchMeta">20 patients queued.</div>
-        <button class="run" id="scanBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M4 20v-3h16v3"/><path d="M9 4v16"/><path d="M15 4v16"/></svg>
-          <span id="scanLabel">Scan batch</span>
-        </button>
-      </div>
-      <div class="status-bar" id="batchStatus"><span class="sb-dot"></span><span id="batchStatusText">Waiting to scan.</span></div>
-      <div class="containers" id="containers"></div>
-    </section>
-
-    <section id="view-single" hidden>
-      <div class="topbar"><div><h1>Patient pipeline</h1><p>Follow one athlete's results through every layer.</p></div></div>
-      <div class="tabs" id="tabs"></div>
-      <div class="toolbar">
-        <div class="patient-meta" id="patientMeta"></div>
-        <button class="run" id="runBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
-          <span id="runLabel">Run pipeline</span>
-        </button>
-      </div>
-      <div class="status-bar" id="singleStatus"><span class="sb-dot"></span><span id="singleStatusText">Press run to start.</span></div>
-      <div class="pipeline" id="pipeline"></div>
-    </section>
-
-  </main>
-  </div>
+  <div class="sec">Wonder Box</div>
+  <nav class="navs" id="nav"></nav>
+  <div class="sidefoot">Pilot · Shopian, Pulwama, Pampore<br>Demo data, simulated</div>
+ </aside>
+ <div class="main">
+  <header class="top">
+   <div class="crumb" id="crumb">Wonder Box / <b>Overview</b></div>
+   <span class="chip"><span class="dot"></span>18 boxes · synced 2 min ago</span>
+   <span class="chip" id="skchip"><span class="dot"></span>SKUAST-K link live</span>
+   <button class="btn" type="button" id="themeBtn">Theme</button>
+  </header>
+  <main class="content" id="view"></main>
+ </div>
 </div>
+<div class="toast" id="toast" hidden></div>
 
 <script>
-(function(){
-  "use strict";
+const R=(()=>{let s=20261017;return()=>{s=(s*1664525+1013904223)%4294967296;return s/4294967296;};})();
+const $=s=>document.querySelector(s);
+const fmt=(n,d=0)=>Number(n).toLocaleString('en-GB',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SRC={Borewell:'var(--blue)',Spring:'var(--good)',Canal:'var(--saffron)',Stream:'var(--violet)'};
+const SITES=[
+ {k:'SHP',n:'Shopian',c:'Apple, high-density',d:'South Kashmir orchard belt'},
+ {k:'PLW',n:'Pulwama',c:'Apple and cherry',d:'Karewa terraces'},
+ {k:'PMP',n:'Pampore',c:'Saffron',d:'Karewa saffron fields'}];
+const RANGES={ec:[150,700,'µS/cm','Salts (EC)'],ph:[6.5,8.0,'','pH'],turb:[0,5,'NTU','Cloudiness'],press:[1.5,3.0,'bar','Pressure'],temp:[6,18,'°C','Water temp'],flow:[0,0,'m³','Flow today']};
+// boxes
+const BOXES=[];
+const plan=[['SHP',7],['PLW',6],['PMP',5]];
+const srcs=['Borewell','Spring','Canal','Stream'];
+let idx=0;
+plan.forEach(([k,n])=>{for(let i=1;i<=n;i++){idx++;
+ const site=SITES.find(s=>s.k===k),src=k==='PMP'?(i%2?'Borewell':'Canal'):srcs[(i+idx)%4];
+ const need=k==='PMP'?+(6+R()*4).toFixed(1):+(14+R()*10).toFixed(1);
+ let used=+(need*(0.85+R()*0.6)).toFixed(1),ec=Math.round(260+R()*260),ph=+(6.9+R()*0.8).toFixed(1),turb=+(0.6+R()*2.6).toFixed(1),press=+(2+R()*0.7).toFixed(1),temp=+(9+R()*5).toFixed(1),status='ok',ev=null;
+ const id=`WB-${k}-${String(i).padStart(2,'0')}`;
+ if(id==='WB-SHP-03'){turb=11.8;ec=812;ev='runoff';status='crit';}
+ if(id==='WB-PLW-02'){press=1.1;ec=745;used=+(need*1.55).toFixed(1);ev='overpump';status='warn';}
+ if(id==='WB-SHP-06'){ev='contam';status='warn';turb=4.4;ec=690;}
+ if(id==='WB-PMP-04'){used=+(need*0.55).toFixed(1);ev='under';status='warn';}
+ if(id==='WB-PLW-05'){status='off';}
+ BOXES.push({id,k,site,src:id==='WB-SHP-03'?'Spring':src,crop:site.c,need,used,ec,ph,turb,press,temp,status,ev,sync:status==='off'?'6 h ago':`${1+Math.floor(R()*9)} min ago`});}});
+BOXES.forEach(b=>{const z=[(b.ec-425)/137,(b.ph-7.25)/.37,(b.turb-2.5)/1.25,(2.25-b.press)/.37].map(v=>Math.max(0,Math.abs(v)-1));b.score=Math.max(18,Math.round(100-z.reduce((a,v)=>a+v,0)*14));if(b.status==='off')b.score=null;});
+const stOf=(v,[lo,hi])=>v<lo||v>hi?'out':(v<lo+(hi-lo)*.1||v>hi-(hi-lo)*.1)?'watch':'ok';
+const EVT={
+ runoff:{n:'Runoff',c:'var(--crit)',rule:'Cloudiness and salts jump together within hours of rain or orchard spraying.',tr:['Turbidity > 10 NTU','EC up > 40% vs source normal','Rain or spray logged in last 24 h']},
+ overpump:{n:'Over-pumping',c:'var(--warn)',rule:'Pressure and flow fall while salts rise: the borewell is being drawn too hard.',tr:['Pressure < 1.5 bar','EC rising 3 days running','Use > 140% of crop need']},
+ contam:{n:'Contamination watch',c:'var(--violet)',rule:'An unusual pattern at a source the sensors cannot explain. A lab test is requested.',tr:['EC and turbidity drifting from source normal','Spring season, spray window','No rain to explain it']},
+ under:{n:'Under-watering',c:'var(--blue)',rule:'The crop got far less than it needed for several days.',tr:['Use < 60% of crop need','3 days running','Hot, dry forecast']},
+ leak:{n:'Leak or pressure loss',c:'var(--saffron)',rule:'Flow continues with no valve open, or pressure drops suddenly.',tr:['Night flow > 0 with valves shut','Pressure drop > 30% in an hour']}};
+const EVENTS=[
+ {id:'E-1042',k:'runoff',box:'WB-SHP-03',when:'Today 06:40',st:['rd','Open · lab requested'],note:'Turbidity 11.8 NTU and EC 812 µS/cm after overnight rain and a fungicide spray on 16 Oct.'},
+ {id:'E-1041',k:'overpump',box:'WB-PLW-02',when:'Yesterday 18:15',st:['am','Open'],note:'Pressure 1.1 bar; use 155% of crop need; EC rising for 3 days.'},
+ {id:'E-1039',k:'contam',box:'WB-SHP-06',when:'16 Oct 11:20',st:['bl','Sample at SKUAST-K lab'],note:'Slow drift in EC and cloudiness with no rain. Pesticide panel requested.'},
+ {id:'E-1036',k:'under',box:'WB-PMP-04',when:'15 Oct 09:00',st:['am','Advisory sent'],note:'Saffron field got 55% of its need for 3 days during corm sprouting.'},
+ {id:'E-1030',k:'leak',box:'WB-PLW-04',when:'12 Oct 02:10',st:['ok','Closed · fixed'],note:'Night flow with valves shut. Cracked joint on the manifold outlet, replaced.'}];
+const LAB=[
+ {s:'S-2207',box:'WB-SHP-03',ev:'E-1042',sent:'Today',test:'Pesticide panel + nitrate',st:['am','Collected'],res:'—'},
+ {s:'S-2204',box:'WB-SHP-06',ev:'E-1039',sent:'16 Oct',test:'Pesticide panel',st:['bl','At SKUAST-K lab'],res:'Due 21 Oct'},
+ {s:'S-2196',box:'WB-SHP-01',ev:'Routine',sent:'01 Oct',test:'Monthly routine panel',st:['ok','Result in'],res:'Chlorpyrifos detected, below limit'},
+ {s:'S-2195',box:'WB-PLW-03',ev:'Routine',sent:'01 Oct',test:'Monthly routine panel',st:['ok','Result in'],res:'None detected'},
+ {s:'S-2193',box:'WB-PMP-02',ev:'Routine',sent:'01 Oct',test:'Monthly routine panel',st:['ok','Result in'],res:'Nitrate 38 mg/L, watch'}];
+const series=(base,amp,n=24,spike)=>Array.from({length:n},(_,i)=>+(base+Math.sin(i/3.2)*amp*.5+(R()-.5)*amp*.6+(spike&&i>n-5?spike*(i-(n-5))/4:0)).toFixed(2));
+const spark=(vals,col,lo,hi)=>{const mn=Math.min(lo??Infinity,...vals),mx=Math.max(hi??-Infinity,...vals),r=(mx-mn)||1,X=i=>i*(100/(vals.length-1)),Y=v=>24-(v-mn)/r*22;const d=vals.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('');return `<svg viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><path d="${d}L100 26L0 26Z" fill="${col}" fill-opacity=".14"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/><circle cx="100" cy="${Y(vals.at(-1)).toFixed(1)}" r="2.2" fill="${col}"/></svg>`;};
+const scoreCell=b=>b.score===null?'<span class="pill gr">No data</span>':`<span class="score"><i><em style="width:${b.score}%;background:${b.score>=75?'var(--good)':b.score>=50?'var(--warn)':'var(--crit)'}"></em></i><b class="num">${b.score}</b></span>`;
+const statPill=b=>({ok:'<span class="pill ok">Normal</span>',warn:'<span class="pill am">Watch</span>',crit:'<span class="pill rd">Act now</span>',off:'<span class="pill gr">Offline</span>'})[b.status];
+const srcCell=s=>`<span class="src"><i style="background:${SRC[s]}"></i>${s}</span>`;
+const pctUse=b=>Math.round(b.used/b.need*100);
 
-  var MARKERS = {
-    ck:       { label:"Creatine Kinase", unit:"U/L", decimals:0, bad:"high", threshold:350 },
-    crp:      { label:"CRP", unit:"mg/L", decimals:1, bad:"high", threshold:7 },
-    ct:       { label:"Cortisol:Testosterone", unit:"ratio", decimals:2, bad:"high", threshold:0.10 },
-    vitd:     { label:"Vitamin D (25-OH)", unit:"ng/mL", decimals:0, bad:"low", threshold:20 },
-    ferritin: { label:"Ferritin", unit:"ng/mL", decimals:0, bad:"low", threshold:20 },
-    hb:       { label:"Haemoglobin", unit:"g/dL", decimals:1, bad:"low", threshold:11.5 },
-    tsat:     { label:"Transferrin Saturation", unit:"%", decimals:0, bad:"low", threshold:15 },
-    carotenoid:{ label:"Serum Carotenoids", unit:"µg/dL", decimals:0, bad:"low", threshold:40 },
-    wbc:      { label:"White Blood Cell Count", unit:"x10⁹/L", decimals:1, bad:"high", threshold:11 },
-    procalcitonin:{ label:"Procalcitonin", unit:"ng/mL", decimals:2, bad:"high", threshold:0.25 },
-    temp:     { label:"Core Temperature", unit:"°C", decimals:1, bad:"high", threshold:37.6 }
-  };
-  var ORDER = ["ck","crp","ct","vitd","ferritin","hb","tsat","carotenoid","wbc","procalcitonin","temp"];
-  var WEEKS = ["Wk 1","Wk 2","Wk 3","Wk 4"];
+const PAGES=[
+ ['ov','Overview','<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v3h6V4z"/>'],
+ ['boxes','Wonder Boxes','<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 6V4M16 6V4M4 12h16"/>'],
+ ['events','Water events','<path d="M12 3 2 20h20zM12 9v5M12 17h.01"/>'],
+ ['lab','Lab queue','<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>'],
+ ['model','The model','<path d="M4 19h16M6 15l4-5 3 3 5-7"/>'],
+ ['link','SKUAST-K link','<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>']];
+let page='ov',sel='WB-SHP-03';
+function navHTML(){return PAGES.map(([k,l,ic])=>`<button class="nav" type="button" data-p="${k}" ${page===k?'aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic}</svg>${l}${k==='events'?`<span class="ct hot">${EVENTS.filter(e=>!e.st[1].startsWith('Closed')).length}</span>`:k==='lab'?`<span class="ct">${LAB.filter(l=>!l.st[1].startsWith('Result')).length}</span>`:k==='boxes'?`<span class="ct">${BOXES.length}</span>`:''}</button>`).join('');}
+const head=(eb,t,p,extra='')=>`<div class="ph"><div><div class="eb">${eb}</div><h1>${t}</h1><p>${p}</p></div><div style="display:flex;gap:8px;align-items:center">${extra}<span class="sim">Simulated pilot data</span></div></div>`;
 
-  var PANELS = [
-    { id:"musculoskeletal", title:"Musculoskeletal & Inflammation", icon:"bone", tone:"critical", markers:["ck","crp","ct"] },
-    { id:"micronutrient", title:"Micronutrient & Recovery", icon:"droplet", tone:"warning", markers:["vitd","ferritin","hb","tsat","carotenoid"] },
-    { id:"infection", title:"Infection", icon:"shield", tone:"critical", markers:["wbc","procalcitonin","crp","temp"] }
-  ];
-
-  var ICONS = {
-    users:'<path d="M7 13a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M1.5 19c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5"/><path d="M15 7a2.8 2.8 0 1 1 0 5.6"/><path d="M14 14.3c2 .3 3.5 1.8 4.1 4.2"/>',
-    flag:'<path d="M5 20V4"/><path d="M5 5c1.8-1.3 3.6-1.3 5.4 0s3.6 1.3 5.4 0v8c-1.8 1.3-3.6 1.3-5.4 0s-3.6-1.3-5.4 0"/>',
-    target:'<circle cx="11" cy="11" r="8.2"/><circle cx="11" cy="11" r="4.6"/><circle cx="11" cy="11" r="1"/>',
-    funnel:'<path d="M3 4h16l-6 7.5V18l-4 2v-8.5Z"/>',
-    shieldCheck:'<path d="M11 3 4 5.5V11c0 4.8 3 8 7 9.5 4-1.5 7-4.7 7-9.5V5.5Z"/><path d="m8.2 11.2 2 2 4-4.3"/>',
-    bone:'<path d="M6.5 6.5c-1.4-1.4-3.6-1.4-4.6 0-.9 1-.7 2.4.3 3.4l10 10c1 1 2.4 1.2 3.4.3 1.4-1 1.4-3.2 0-4.6"/><path d="M17.5 6.5c1.4-1.4 3.6-1.4 4.6 0 .9 1 .7 2.4-.3 3.4l-10 10c-1 1-2.4 1.2-3.4.3-1.4-1-1.4-3.2 0-4.6"/>',
-    droplet:'<path d="M11 2.5S4.5 9.8 4.5 14.5a6.5 6.5 0 0 0 13 0C17.5 9.8 11 2.5 11 2.5Z"/>',
-    shield:'<path d="M11 3 4 5.5V11c0 4.8 3 8 7 9.5 4-1.5 7-4.7 7-9.5V5.5Z"/>',
-    pulse:'<path d="M2 12h4l2.5-7L12 19l2.5-7H20"/>',
-    spark:'<path d="M12 2 5 13h6l-1 8 9-12h-6l1-7Z"/>'
-  };
-  function icon(name, size){ size = size||16; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+ICONS[name]+'</svg>'; }
-
-  function ring(fracRaw, color, size, label, sublabel){
-    var frac = Math.max(0, Math.min(1, fracRaw));
-    var r = size/2-7, cx=size/2, cy=size/2, C=2*Math.PI*r;
-    var len = frac*C;
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'+
-      '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--border)" stroke-width="7"/>'+
-      '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+len.toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 '+cx+' '+cy+')"/>'+
-      '<text x="'+cx+'" y="'+(cy+(sublabel?-1:4))+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="700" fill="var(--fg)">'+label+'</text>'+
-      (sublabel? '<text x="'+cx+'" y="'+(cy+13)+'" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="8.5" fill="var(--muted)">'+sublabel+'</text>' : '')+
-      '</svg>';
-  }
-
-  function donutChart(segments, size, centerLabel, centerSub){
-    var r = size/2-15, cx=size/2, cy=size/2, C=2*Math.PI*r;
-    var total = segments.reduce(function(s,x){ return s+x.value; },0) || 1;
-    var offset = 0;
-    var circles = segments.map(function(seg){
-      var len = (seg.value/total)*C;
-      var html = seg.value>0 ? '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+seg.color+'" stroke-width="16" stroke-dasharray="'+len.toFixed(1)+' '+(C-len).toFixed(1)+'" stroke-dashoffset="'+(-offset).toFixed(1)+'" transform="rotate(-90 '+cx+' '+cy+')"/>' : '';
-      offset += len;
-      return html;
-    }).join("");
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'+circles+
-      '<text x="'+cx+'" y="'+(cy-3)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="24" font-weight="700" fill="var(--fg)">'+centerLabel+'</text>'+
-      '<text x="'+cx+'" y="'+(cy+16)+'" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="10.5" fill="var(--muted)">'+centerSub+'</text>'+
-      '</svg>';
-  }
-
-  var PATIENTS = [
-    { id:"ahmed", name:"Ahmed K.", sport:"Footballer", meta:"Men's football · age 24", values:{
-      ck:[180,260,410,520], crp:[3.1,4.8,7.2,9.8], ct:[0.06,0.07,0.09,0.12],
-      vitd:[32,31,33,30], ferritin:[85,80,78,82], hb:[14.8,14.7,14.9,14.8], tsat:[27,22,18,13], carotenoid:[130,128,125,129],
-      wbc:[6.2,6.4,6.3,6.5], procalcitonin:[0.04,0.04,0.05,0.04], temp:[36.6,36.7,36.9,37.0]
-    }},
-    { id:"fatima", name:"Fatima R.", sport:"Track & field", meta:"Track & field · age 21", values:{
-      ck:[150,160,155,165], crp:[2.0,2.2,1.8,2.1], ct:[0.05,0.05,0.06,0.05],
-      vitd:[24,19,16,13], ferritin:[22,18,14,11], hb:[12.6,12.2,11.8,11.4], tsat:[18,16,14,12], carotenoid:[95,93,90,92],
-      wbc:[6.0,6.1,5.9,6.0], procalcitonin:[0.03,0.03,0.04,0.03], temp:[36.5,36.6,36.6,36.5]
-    }},
-    { id:"sara", name:"Sara M.", sport:"Swimmer", meta:"Swimming · age 19", values:{
-      ck:[165,172,168,174], crp:[2.4,2.6,2.3,2.5], ct:[0.05,0.05,0.04,0.05],
-      vitd:[34,35,33,34], ferritin:[88,91,89,92], hb:[13.4,13.5,13.6,13.5], tsat:[30,31,29,31], carotenoid:[140,142,139,141],
-      wbc:[6.5,6.6,6.4,6.5], procalcitonin:[0.04,0.03,0.04,0.04], temp:[36.6,36.5,36.6,36.6]
-    }},
-    { id:"mariam", name:"Mariam S.", sport:"Basketball player", meta:"Basketball · age 23", values:{
-      ck:[160,165,158,170], crp:[2.2,2.0,2.3,2.1], ct:[0.05,0.05,0.05,0.06],
-      vitd:[22,18,15,12], ferritin:[65,68,70,72], hb:[13.1,13.0,13.2,13.1], tsat:[26,27,25,26], carotenoid:[108,110,106,109],
-      wbc:[6.1,6.2,6.0,6.1], procalcitonin:[0.03,0.04,0.03,0.03], temp:[36.5,36.6,36.5,36.6]
-    }},
-    { id:"youssef", name:"Youssef T.", sport:"Cyclist", meta:"Cycling · age 27", values:{
-      ck:[175,180,170,185], crp:[2.6,2.4,2.7,2.5], ct:[0.05,0.05,0.04,0.05],
-      vitd:[36,35,34,36], ferritin:[95,93,97,94], hb:[14.4,14.3,14.5,14.4], tsat:[29,30,28,29], carotenoid:[45,35,28,19],
-      wbc:[6.4,6.3,6.5,6.4], procalcitonin:[0.04,0.04,0.03,0.04], temp:[36.6,36.6,36.5,36.6]
-    }},
-    { id:"noor", name:"Noor A.", sport:"Gymnast", meta:"Gymnastics · age 18", values:{
-      ck:[155,150,158,152], crp:[2.1,2.0,2.2,2.1], ct:[0.05,0.05,0.05,0.05],
-      vitd:[33,32,34,33], ferritin:[80,82,79,81], hb:[12.9,13.0,12.8,12.9], tsat:[25,26,24,25], carotenoid:[38,30,24,17],
-      wbc:[5.9,6.0,6.1,6.0], procalcitonin:[0.03,0.03,0.03,0.04], temp:[36.5,36.5,36.6,36.5]
-    }},
-    { id:"omar", name:"Omar H.", sport:"Rower", meta:"Rowing · age 26", values:{
-      ck:[170,175,168,172], crp:[2.3,4.0,6.5,9.0], ct:[0.05,0.06,0.05,0.05],
-      vitd:[31,32,30,31], ferritin:[75,77,74,76], hb:[14.1,14.2,14.0,14.1], tsat:[27,28,26,27], carotenoid:[118,120,116,119],
-      wbc:[6.8,7.9,9.6,12.4], procalcitonin:[0.06,0.11,0.19,0.33], temp:[36.6,36.8,37.3,38.1]
-    }},
-    { id:"khalid", name:"Khalid B.", sport:"Footballer", meta:"Men's football · age 22", values:{
-      ck:[190,300,430,560], crp:[3.5,5.5,8.0,10.5], ct:[0.06,0.08,0.10,0.13],
-      vitd:[28,24,21,17], ferritin:[90,88,91,89], hb:[14.6,14.5,14.7,14.6], tsat:[26,21,17,12], carotenoid:[125,122,127,124],
-      wbc:[6.6,6.8,6.7,6.9], procalcitonin:[0.05,0.05,0.04,0.05], temp:[36.6,36.8,36.9,37.1]
-    }},
-    { id:"lama", name:"Lama F.", sport:"Triathlete", meta:"Triathlon · age 25", values:{
-      ck:[180,185,178,182], crp:[2.5,3.0,3.4,3.8], ct:[0.05,0.06,0.06,0.06],
-      vitd:[35,34,36,35], ferritin:[92,90,94,91], hb:[13.8,13.9,13.7,13.8], tsat:[28,29,27,28], carotenoid:[42,33,25,16],
-      wbc:[6.3,6.2,6.4,6.3], procalcitonin:[0.04,0.04,0.04,0.03], temp:[36.6,36.6,36.5,36.6]
-    }},
-    { id:"rashid", name:"Rashid Q.", sport:"Athlete", meta:"Athletics · age 20", values:{
-      ck:[172,168,175,170], crp:[2.2,2.1,2.3,2.2], ct:[0.05,0.05,0.05,0.05],
-      vitd:[33,34,32,33], ferritin:[85,87,84,86], hb:[14.0,14.1,13.9,14.0], tsat:[27,28,26,27], carotenoid:[132,134,130,133],
-      wbc:[6.2,6.1,6.3,6.2], procalcitonin:[0.04,0.03,0.04,0.04], temp:[36.6,36.5,36.6,36.6]
-    }},
-    { id:"hassan", name:"Hassan M.", sport:"Weightlifter", meta:"Weightlifting · age 28", values:{
-      ck:[200,320,480,610], crp:[3.3,5.0,7.5,10.2], ct:[0.06,0.08,0.10,0.13],
-      vitd:[29,25,22,18], ferritin:[90,88,92,89], hb:[14.9,14.8,15.0,14.9], tsat:[29,28,30,29], carotenoid:[128,126,130,127],
-      wbc:[6.3,6.5,6.4,6.6], procalcitonin:[0.04,0.04,0.05,0.04], temp:[36.7,36.8,37.0,37.2]
-    }},
-    { id:"dana", name:"Dana K.", sport:"Tennis player", meta:"Tennis · age 22", values:{
-      ck:[168,170,165,172], crp:[2.3,2.2,2.4,2.3], ct:[0.05,0.05,0.05,0.05],
-      vitd:[32,33,31,32], ferritin:[82,84,80,83], hb:[13.6,13.7,13.5,13.6], tsat:[28,29,27,28], carotenoid:[125,127,123,126],
-      wbc:[6.1,6.2,6.0,6.1], procalcitonin:[0.03,0.04,0.03,0.03], temp:[36.5,36.6,36.5,36.6]
-    }},
-    { id:"faisal", name:"Faisal R.", sport:"Boxer", meta:"Boxing · age 25", values:{
-      ck:[175,178,172,180], crp:[2.6,4.2,6.8,9.3], ct:[0.05,0.05,0.06,0.05],
-      vitd:[29,30,28,29], ferritin:[78,80,76,79], hb:[14.3,14.2,14.4,14.3], tsat:[26,27,25,26], carotenoid:[115,117,113,116],
-      wbc:[6.9,8.1,9.8,12.6], procalcitonin:[0.07,0.12,0.21,0.34], temp:[36.7,36.9,37.4,38.2]
-    }},
-    { id:"reem", name:"Reem A.", sport:"Volleyball player", meta:"Volleyball · age 20", values:{
-      ck:[158,160,155,162], crp:[2.1,2.0,2.2,2.1], ct:[0.05,0.05,0.05,0.05],
-      vitd:[23,19,16,13], ferritin:[72,74,70,73], hb:[13.3,13.2,13.4,13.3], tsat:[27,28,26,27], carotenoid:[110,112,108,111],
-      wbc:[6.0,6.1,5.9,6.0], procalcitonin:[0.03,0.03,0.04,0.03], temp:[36.5,36.5,36.6,36.6]
-    }},
-    { id:"saeed", name:"Saeed N.", sport:"Marathon runner", meta:"Marathon · age 29", values:{
-      ck:[182,180,185,183], crp:[2.5,2.4,2.6,2.5], ct:[0.05,0.05,0.05,0.05],
-      vitd:[34,35,33,34], ferritin:[90,92,88,91], hb:[14.0,14.1,13.9,14.0], tsat:[28,29,27,28], carotenoid:[44,36,27,18],
-      wbc:[6.4,6.3,6.5,6.4], procalcitonin:[0.04,0.04,0.03,0.04], temp:[36.6,36.5,36.6,36.5]
-    }},
-    { id:"hind", name:"Hind T.", sport:"Squash player", meta:"Squash · age 23", values:{
-      ck:[160,162,158,164], crp:[2.2,2.1,2.3,2.2], ct:[0.05,0.05,0.05,0.05],
-      vitd:[31,32,30,31], ferritin:[85,87,83,86], hb:[13.2,13.3,13.1,13.2], tsat:[27,28,26,27], carotenoid:[130,132,128,131],
-      wbc:[6.2,6.1,6.3,6.2], procalcitonin:[0.03,0.04,0.03,0.04], temp:[36.5,36.6,36.6,36.5]
-    }},
-    { id:"majed", name:"Majed S.", sport:"Handball player", meta:"Handball · age 24", values:{
-      ck:[170,172,168,174], crp:[2.3,2.2,2.4,2.3], ct:[0.05,0.05,0.05,0.06],
-      vitd:[22,18,15,12], ferritin:[24,20,16,12], hb:[13.0,12.6,12.2,11.8], tsat:[22,20,18,16], carotenoid:[112,114,110,113],
-      wbc:[6.3,6.2,6.4,6.3], procalcitonin:[0.04,0.03,0.04,0.04], temp:[36.6,36.5,36.6,36.6]
-    }},
-    { id:"aisha", name:"Aisha L.", sport:"Judo athlete", meta:"Judo · age 21", values:{
-      ck:[175,177,173,178], crp:[2.4,2.3,2.5,2.4], ct:[0.05,0.05,0.05,0.05],
-      vitd:[33,34,32,33], ferritin:[88,90,86,89], hb:[13.7,13.8,13.6,13.7], tsat:[29,30,28,29], carotenoid:[40,32,24,15],
-      wbc:[6.1,6.2,6.0,6.1], procalcitonin:[0.03,0.03,0.04,0.03], temp:[36.5,36.6,36.5,36.6]
-    }},
-    { id:"tariq", name:"Tariq B.", sport:"Equestrian", meta:"Equestrian · age 27", values:{
-      ck:[165,167,163,169], crp:[2.1,2.0,2.2,2.1], ct:[0.05,0.05,0.05,0.05],
-      vitd:[30,31,29,30], ferritin:[80,82,78,81], hb:[14.2,14.3,14.1,14.2], tsat:[27,28,26,27], carotenoid:[122,124,120,123],
-      wbc:[6.0,6.1,5.9,6.0], procalcitonin:[0.04,0.03,0.04,0.04], temp:[36.6,36.5,36.6,36.5]
-    }},
-    { id:"salma", name:"Salma Y.", sport:"Badminton player", meta:"Badminton · age 22", values:{
-      ck:[163,165,161,167], crp:[2.2,2.1,2.3,2.2], ct:[0.05,0.05,0.05,0.05],
-      vitd:[32,33,31,32], ferritin:[83,85,81,84], hb:[13.5,13.6,13.4,13.5], tsat:[28,29,27,28], carotenoid:[128,130,126,129],
-      wbc:[6.2,6.1,6.3,6.2], procalcitonin:[0.03,0.04,0.03,0.03], temp:[36.5,36.6,36.6,36.5]
-    }}
-  ];
-  var FEATURED_IDS = ["ahmed","omar","fatima","mariam","youssef","sara"];
-  function byId(id){ var p=null; PATIENTS.forEach(function(x){ if(x.id===id) p=x; }); return p; }
-
-  function fmt(n, d){ return n.toFixed(d); }
-  function isFlagged(key, series){ var m=MARKERS[key], last=series[3]; return m.bad==="high" ? last>m.threshold : last<m.threshold; }
-  function isTrending(key, series){ var m=MARKERS[key], d=series[3]-series[0]; return m.bad==="high" ? d>0 : d<0; }
-
-  function compute(patient){
-    var v = patient.values;
-    var flags = {};
-    ORDER.forEach(function(k){ flags[k] = isFlagged(k, v[k]) && isTrending(k, v[k]); });
-    var injuryFlags = ["ck","crp","ct"].filter(function(k){ return flags[k]; });
-    var fatigueFlags = ["vitd","ferritin"].filter(function(k){ return flags[k]; });
-    var infectionFlags = ["wbc","procalcitonin"].filter(function(k){ return flags[k]; });
-    var sentinelInjury = injuryFlags.length === 3;
-    var sentinelFatigue = fatigueFlags.length === 2;
-    var sentinelInfection = infectionFlags.length === 2;
-    var cohort = "none";
-    if(sentinelInjury) cohort = "injury";
-    else if(sentinelInfection) cohort = "infection";
-    else if(sentinelFatigue) cohort = "fatigue";
-    else if(flags.carotenoid) cohort = "carotenoid";
-    else if(flags.vitd) cohort = "vitd-watch";
-    return { flags:flags, injuryFlags:injuryFlags, fatigueFlags:fatigueFlags, infectionFlags:infectionFlags,
-             sentinelInjury:sentinelInjury, sentinelFatigue:sentinelFatigue, sentinelInfection:sentinelInfection, cohort:cohort };
-  }
-  function triage(patient){
-    var c = compute(patient);
-    if(c.sentinelInjury) return "injury";
-    if(c.sentinelInfection) return "infection";
-    if(c.flags.vitd) return "vitaminD";
-    if(c.flags.carotenoid) return "carotenoid";
-    return "clear";
-  }
-  var COHORT_LABEL = { injury:"Overreaching / Injury-Risk", infection:"Infection / Illness Risk", fatigue:"Fatigue & Recovery Risk", carotenoid:"Carotenoid Deficiency (watch)", "vitd-watch":"Vitamin D (watch)", none:"No active event" };
-  var COHORT_TONE = { injury:"critical", infection:"critical", fatigue:"warning", carotenoid:"info", "vitd-watch":"warning", none:"good" };
-
-  function dot(kind){ return '<span class="dot8 dot8-'+kind+'"></span>'; }
-
-  var SINGLE = {
-    carotenoid: { name:"Carotenoid Deficiency", tone:"info",
-      why:"Antioxidant status marker, low and falling, with every other marker normal.",
-      cross:"Only one marker tracks this, so it's held as a watch item, not a confirmed event.",
-      rec:"Review dietary carotenoid intake; add CRP to the next panel.", recheck:"Serum carotenoids in 4 weeks, with CRP." },
-    vitd: { name:"Vitamin D — watch", tone:"warning",
-      why:"Vitamin D is falling below threshold; Ferritin hasn't crossed yet.",
-      cross:"Can't confirm a compounding pattern until Ferritin also flags.",
-      rec:"Start Vitamin D3 supplementation now.", recheck:"Vitamin D and Ferritin together in 4 weeks." }
-  };
-
-  function payloadCard(patient){
-    var v = patient.values;
-    var rows = ORDER.map(function(k){
-      var m=MARKERS[k], series=v[k];
-      var flagged = isFlagged(k,series) && isTrending(k,series);
-      var cls = "";
-      if(flagged){ cls = (k==="ck"||k==="crp"||k==="ct"||k==="wbc"||k==="procalcitonin") ? "flagged crit" : (k==="carotenoid" ? "flagged info" : "flagged"); }
-      return '<tr class="'+cls+'"><td>'+m.label+' <span style="color:var(--muted);font-size:10.5px;">('+m.unit+')</span></td>'+
-        series.map(function(x){ return '<td class="num">'+fmt(x,m.decimals)+'</td>'; }).join("")+'</tr>';
-    }).join("");
-    return '<div class="table-wrap"><table class="data"><thead><tr><th>Marker</th>'+
-      WEEKS.map(function(w){return '<th class="num">'+w+'</th>';}).join("")+
-      '</tr></thead><tbody>'+rows+'</tbody></table></div>';
-  }
-
-  function categorySplitCard(patient, c){
-    return PANELS.map(function(p){
-      var flagged = p.markers.filter(function(k){ return c.flags[k]; });
-      var kind = flagged.length ? (p.id==="musculoskeletal"||p.id==="infection" ? "critical" : "warning") : "muted";
-      return '<div class="flag-row">'+dot(kind)+'<p><b>'+p.title+'</b> — '+(flagged.length ? flagged.map(function(k){return MARKERS[k].label;}).join(", ")+" flagged" : "nothing flagged")+'</p></div>';
-    }).join("");
-  }
-
-  function sentinelCard(patient, c){
-    var v = patient.values;
-    var rows = ORDER.filter(function(k){ return c.flags[k]; }).map(function(k){
-      var m=MARKERS[k];
-      var kind = (k==="ck"||k==="crp"||k==="ct"||k==="wbc"||k==="procalcitonin") ? "critical" : (k==="carotenoid" ? "info" : "warning");
-      return '<div class="flag-row">'+dot(kind)+'<p><b>'+m.label+'</b> '+fmt(v[k][0],m.decimals)+' → '+fmt(v[k][3],m.decimals)+' '+m.unit+' over 4 weeks, past threshold ('+m.threshold+').</p></div>';
-    }).join("");
-    if(!rows){ rows = '<div class="flag-row">'+dot("good")+'<p>All markers in range. Nothing flagged.</p></div>'; }
-    return rows;
-  }
-
-  function cohortCard(patient, c){
-    if(c.cohort==="injury") return '<div class="verdict critical"><b>Overreaching / Injury-Risk — confirmed</b><span>CK, CRP and Cortisol:Testosterone all crossed threshold together</span></div>';
-    if(c.cohort==="infection") return '<div class="verdict critical"><b>Infection / Illness Risk — confirmed</b><span>WBC and Procalcitonin both above threshold and rising, CRP corroborating</span></div>';
-    if(c.cohort==="fatigue") return '<div class="verdict warning"><b>Fatigue &amp; Recovery Risk — confirmed</b><span>Vitamin D and Ferritin both below threshold, both falling</span></div>';
-    if(c.cohort==="carotenoid" || c.cohort==="vitd-watch"){
-      var s = SINGLE[c.cohort==="carotenoid"?"carotenoid":"vitd"];
-      return '<div class="verdict '+s.tone+'"><b>'+s.name+' — flagged, not yet compound</b><span>'+s.why+'</span></div>';
-    }
-    return '<div class="verdict good"><b>No compound event</b><span>No marker group crossed threshold together</span></div>';
-  }
-
-  function crossMarkerCard(patient, c){
-    var rows = CROSS_COMBOS.map(function(def){
-      var hit = def.matchFn(c);
-      return '<div class="flag-row">'+dot(hit?def.tone:"muted")+'<p><b>'+def.title+'</b> ('+MARKERS[def.legA].label+' + '+MARKERS[def.legB].label+') — '+
-        (hit ? def.insight : 'not currently matching.')+'</p></div>';
-    }).join("");
-    return rows;
-  }
-
-  function handshakeCard(patient, c){
-    if(c.cohort==="injury") return '<div class="flag-row">'+dot("good")+'<p>CK and CRP trends confirm each other; Cortisol:Testosterone agrees.</p></div><div class="flag-row">'+dot("good")+'<p><b>Consistent — passed on.</b></p></div>';
-    if(c.cohort==="infection") return '<div class="flag-row">'+dot("good")+'<p>WBC trend confirmed independently by Procalcitonin trend — both rising, both infection markers.</p></div><div class="flag-row">'+dot("good")+'<p>CRP corroborates, elevated and rising alongside.</p></div><div class="flag-row">'+dot("good")+'<p><b>Consistent — passed on.</b></p></div>';
-    if(c.cohort==="fatigue") return '<div class="flag-row">'+dot("good")+'<p>Vitamin D and Ferritin trends confirm each other.</p></div><div class="flag-row">'+dot("good")+'<p><b>Consistent — passed on.</b></p></div>';
-    if(c.cohort==="carotenoid" || c.cohort==="vitd-watch"){
-      var s = SINGLE[c.cohort==="carotenoid"?"carotenoid":"vitd"];
-      return '<div class="flag-row">'+dot("warning")+'<p>'+s.cross+'</p></div><div class="flag-row">'+dot("warning")+'<p><b>Held as a watch item, lower urgency.</b></p></div>';
-    }
-    return '<div class="flag-row">'+dot("muted")+'<p>Nothing flagged, nothing to check.</p></div><div class="flag-row">'+dot("good")+'<p><b>Pipeline stops here.</b></p></div>';
-  }
-
-  function reportCard(patient, c){
-    var tone, title, body;
-    if(c.cohort==="injury"){
-      tone="critical"; title="Overreaching / Injury-Risk";
-      body = '<p><b>Do:</b> reduce training load ~20% this week.</p><p><b>Recheck:</b> CK and CRP in 7 days.</p>';
-    } else if(c.cohort==="infection"){
-      tone="critical"; title="Infection / Illness Risk";
-      body = '<p><b>Do:</b> limit training exposure, clinical infection workup (CBC, culture if indicated).</p><p><b>Recheck:</b> WBC and Procalcitonin in 48–72 hours.</p>';
-    } else if(c.cohort==="fatigue"){
-      tone="warning"; title="Fatigue & Recovery Risk";
-      body = '<p><b>Do:</b> start Vitamin D3, review iron intake, route to a clinician.</p><p><b>Recheck:</b> Vitamin D and Ferritin in 4 weeks.</p>';
-    } else if(c.cohort==="carotenoid" || c.cohort==="vitd-watch"){
-      var s = SINGLE[c.cohort==="carotenoid"?"carotenoid":"vitd"];
-      tone = s.tone; title = s.name;
-      body = '<p><b>Do:</b> '+s.rec+'</p><p><b>Recheck:</b> '+s.recheck+'</p>';
-    } else {
-      tone="good"; title="No active event";
-      body = '<p><b>Do:</b> continue routine monitoring.</p><p><b>Recheck:</b> next scheduled panel.</p>';
-    }
-    return '<div class="report-card"><div class="rc-head" style="background:var(--'+tone+'-soft)">'+
-      '<b>'+title+'</b><span class="pill '+tone+'">'+patient.name.toUpperCase()+'</span></div>'+
-      '<div class="rc-body">'+body+'</div></div>';
-  }
-
-  var LAYERS = [
-    { id:"ingestion", title:"Ingestion", sub:"The raw lab panel, received and parsed.", build:payloadCard },
-    { id:"split", title:"Category Split", sub:"Markers are routed to their biological-line panel.", build:categorySplitCard },
-    { id:"sentinel", title:"Sentinel", sub:"Flags markers out of range and trending the wrong way.", build:sentinelCard },
-    { id:"cohort", title:"Disease Cohort", sub:"Confirms an event only when a panel's markers move together.", build:cohortCard },
-    { id:"crossmarker", title:"Cross-Marker Read", sub:"Checks this patient's markers against each other, across panels — not just one number against one range.", build:crossMarkerCard },
-    { id:"handshake", title:"Handshake", sub:"Cross-checks the flagged markers against each other.", build:handshakeCard },
-    { id:"report", title:"Report", sub:"The recommendation a clinician acts on.", build:reportCard }
-  ];
-
-  // ---------- ingestion demo ----------
-  var ingestBtn = document.getElementById("ingestBtn");
-  var ingestLabel = document.getElementById("ingestLabel");
-  var ingestPreview = document.getElementById("ingestPreview");
-  var ingestTable = document.getElementById("ingestTable");
-  var ingestDone = false;
-  ingestBtn.addEventListener("click", function(){
-    if(ingestDone){
-      ingestDone = false; ingestPreview.hidden = true; ingestLabel.textContent = "Ingest report";
-      Array.prototype.forEach.call(document.querySelectorAll("#ingestSteps .ingest-step"), function(el){ el.classList.remove("active","done"); });
-      return;
-    }
-    ingestBtn.disabled = true;
-    var steps = document.querySelectorAll("#ingestSteps .ingest-step");
-    var i=0;
-    function step(){
-      if(i>0) steps[i-1].classList.remove("active"); steps[i-1] && steps[i-1].classList.add("done");
-      if(i<steps.length){ steps[i].classList.add("active"); i++; setTimeout(step,380); }
-      else {
-        ingestDone = true; ingestBtn.disabled=false; ingestLabel.textContent = "Reset";
-        ingestTable.innerHTML = payloadCard(byId("ahmed"));
-        ingestPreview.hidden = false;
-      }
-    }
-    step();
-  });
-
-  // ---------- population dashboard ----------
-  var popSearchTerm = "", popFilterVal = "", popSort = { key:"name", dir:1 };
-
-  var TONE_COLOR = { critical:"var(--critical)", warning:"var(--warning)", info:"var(--info)", good:"var(--good)" };
-
-  function renderDistChart(){
-    var counts = { injury:0, infection:0, fatigue:0, carotenoid:0, "vitd-watch":0, none:0 };
-    PATIENTS.forEach(function(p){ counts[compute(p).cohort]++; });
-    var order = ["injury","infection","fatigue","carotenoid","vitd-watch","none"];
-    var flagged = PATIENTS.length - counts.none;
-    var segments = order.map(function(k){ return { value:counts[k], color:TONE_COLOR[COHORT_TONE[k]] }; });
-    var legend = order.map(function(k){
-      return '<div class="legend-item"><span class="legend-dot" style="background:'+TONE_COLOR[COHORT_TONE[k]]+'"></span>'+
-        '<span class="ln">'+COHORT_LABEL[k]+'</span><span class="lv">'+counts[k]+'</span></div>';
-    }).join("");
-    document.getElementById("distChart").innerHTML =
-      '<div>'+donutChart(segments, 148, flagged, "of "+PATIENTS.length+" flagged")+'</div>'+
-      '<div class="donut-legend">'+legend+'</div>';
-  }
-
-  function renderPanelLoadChart(){
-    document.getElementById("panelLoadChart").innerHTML = PANELS.map(function(p){
-      var flaggedPatients = PATIENTS.filter(function(pt){ var c = compute(pt); return p.markers.some(function(k){ return c.flags[k]; }); });
-      var n = flaggedPatients.length, pctW = (n/PATIENTS.length*100).toFixed(0);
-      var tone = p.id==="musculoskeletal"||p.id==="infection" ? "critical" : "warning";
-      return '<div class="bar-row"><div class="br-top"><span>'+p.title+'</span><span class="n">'+n+' / '+PATIENTS.length+'</span></div>'+
-        '<div class="bar-track"><div class="bar-fill '+tone+'" style="width:'+pctW+'%"></div></div></div>';
-    }).join("");
-  }
-
-  function renderComboLoadChart(){
-    var crossCount = PATIENTS.filter(function(p){ var c=compute(p); return CROSS_COMBOS.some(function(def){ return def.matchFn(c); }); }).length;
-    var report2Count = FEATURED_EARLY.filter(function(f){
-      var p = byId(f.id), m = MARKERS[f.marker];
-      return predictFromFirstTwo(p.values[f.marker], m)!==null;
-    }).length;
-    var report1Count = FEATURED_EARLY.filter(function(f){
-      var p = byId(f.id), combo = comboById(f.comboId);
-      return earlyPattern(combo, p);
-    }).length;
-    document.getElementById("uspStats").innerHTML =
-      '<div class="usp-stat"><div class="us-value">'+crossCount+' / '+PATIENTS.length+'</div><div class="us-label">carry at least one cross-panel signal</div></div>'+
-      '<div class="usp-stat"><div class="us-value">'+report1Count+'</div><div class="us-label">already show a pattern by report 1</div></div>'+
-      '<div class="usp-stat"><div class="us-value">'+report2Count+'</div><div class="us-label">confidently predicted by report 2, ahead of standard confirmation</div></div>';
-    document.getElementById("comboLoadChart").innerHTML = CROSS_COMBOS.map(function(def){
-      var n = PATIENTS.filter(function(p){ return def.matchFn(compute(p)); }).length;
-      var pctW = (n/PATIENTS.length*100).toFixed(0);
-      return '<div class="bar-row"><div class="br-top"><span>'+def.title+'</span><span class="n">'+n+' / '+PATIENTS.length+'</span></div>'+
-        '<div class="bar-track"><div class="bar-fill '+def.tone+'" style="width:'+pctW+'%"></div></div></div>';
-    }).join("");
-  }
-
-  function renderPopKpis(){
-    var flagged = PATIENTS.filter(function(p){ return compute(p).cohort!=="none"; }).length;
-    var clear = PATIENTS.length - flagged;
-    var panelCounts = PANELS.map(function(p){
-      return { title:p.title, n:PATIENTS.filter(function(pt){ var c=compute(pt); return p.markers.some(function(k){return c.flags[k];}); }).length };
-    });
-    panelCounts.sort(function(a,b){ return b.n-a.n; });
-    var topPanel = panelCounts[0];
-    var sports = {}; PATIENTS.forEach(function(p){ sports[p.sport]=1; });
-    var sportCount = Object.keys(sports).length;
-
-    var crossCount = PATIENTS.filter(function(p){ var c=compute(p); return CROSS_COMBOS.some(function(def){ return def.matchFn(c); }); }).length;
-
-    var kpis = [
-      { icon:"users", tone:"accent", label:"Patients monitored", value:PATIENTS.length, sub:"across "+sportCount+" sports" },
-      { icon:"flag", tone:"critical", label:"Flagged this cycle", value:flagged, sub:Math.round(flagged/PATIENTS.length*100)+"% of roster" },
-      { icon:"target", tone:"warning", label:"Active cohorts", value:4, sub:"1 more in draft" },
-      { icon:"funnel", tone:"info", label:"Most loaded panel", value:topPanel.n, sub:topPanel.title },
-      { icon:"shieldCheck", tone:"good", label:"Clear this cycle", value:clear, sub:"no action needed" }
-    ];
-    var html = kpis.map(function(k){
-      var toneClass = k.tone==="accent" ? "" : " "+k.tone;
-      return '<div class="kpi'+toneClass+'"><div class="kpi-icon">'+icon(k.icon,17)+'</div><div><div class="k-label">'+k.label+'</div><div class="k-value">'+k.value+'</div><div class="k-sub">'+k.sub+'</div></div></div>';
-    }).join("");
-    html += '<div class="kpi usp" id="uspKpi"><div class="kpi-icon">'+icon("spark",17)+'</div><div><div class="k-label">Cross-marker signals</div><div class="k-value">'+crossCount+'</div><div class="k-sub">markers read against each other &rarr;</div></div></div>';
-    document.getElementById("popKpis").innerHTML = html;
-    var uspEl = document.getElementById("uspKpi");
-    if(uspEl) uspEl.addEventListener("click", function(){ setView("predict"); });
-  }
-
-  function renderPopTable(){
-    var term = popSearchTerm.toLowerCase();
-    var rows = PATIENTS.filter(function(p){
-      var c = compute(p);
-      if(popFilterVal && c.cohort!==popFilterVal) return false;
-      if(term && p.name.toLowerCase().indexOf(term)===-1 && p.sport.toLowerCase().indexOf(term)===-1) return false;
-      return true;
-    }).sort(function(a,b){
-      var ka = popSort.key==="status" ? compute(a).cohort : a[popSort.key];
-      var kb = popSort.key==="status" ? compute(b).cohort : b[popSort.key];
-      return ka<kb ? -popSort.dir : ka>kb ? popSort.dir : 0;
-    }).map(function(p){
-      var c = compute(p);
-      var tone = COHORT_TONE[c.cohort];
-      return '<tr data-id="'+p.id+'"><td><b>'+p.name+'</b></td><td>'+p.sport+'</td><td>'+p.meta.split(" · ")[1]+'</td><td><span class="badge '+tone+'">'+COHORT_LABEL[c.cohort]+'</span></td></tr>';
-    }).join("");
-    document.getElementById("popTable").innerHTML =
-      '<thead><tr><th data-k="name">Patient</th><th data-k="sport">Sport</th><th>Age</th><th data-k="status">Status</th></tr></thead>'+
-      '<tbody>'+(rows || '<tr><td colspan="4" style="color:var(--muted);font-style:italic;">No patients match.</td></tr>')+'</tbody>';
-    Array.prototype.forEach.call(document.querySelectorAll("#popTable tbody tr[data-id]"), function(tr){
-      tr.addEventListener("click", function(){
-        activeId = tr.getAttribute("data-id");
-        setView("single"); renderTabs(); renderMeta(); buildPipeline(); setTimeout(runPipeline,150);
-      });
-    });
-    Array.prototype.forEach.call(document.querySelectorAll("#popTable th[data-k]"), function(th){
-      th.addEventListener("click", function(){
-        var k = th.getAttribute("data-k");
-        popSort.dir = (popSort.key===k) ? -popSort.dir : 1;
-        popSort.key = k;
-        renderPopTable();
-      });
-    });
-  }
-
-  function renderPopulation(){
-    renderPopKpis(); renderDistChart(); renderPanelLoadChart(); renderComboLoadChart(); renderPopTable();
-  }
-  document.getElementById("popSearch").addEventListener("input", function(e){ popSearchTerm = e.target.value; renderPopTable(); });
-  document.getElementById("popFilter").addEventListener("change", function(e){ popFilterVal = e.target.value; renderPopTable(); });
-  document.getElementById("goPredictBtn").addEventListener("click", function(){ setView("predict"); });
-
-  // ---------- category split view ----------
-  function jumpToPatient(id){
-    activeId = id; setView("single"); renderTabs(); renderMeta(); buildPipeline(); setTimeout(runPipeline,150);
-  }
-
-  function renderPanelGrid(){
-    document.getElementById("panelGrid").innerHTML = PANELS.map(function(p){
-      var flaggedPatients = PATIENTS.filter(function(pt){ var c = compute(pt); return p.markers.some(function(k){ return c.flags[k]; }); });
-      var frac = flaggedPatients.length/PATIENTS.length;
-      var tone = p.tone;
-      var markerChips = p.markers.map(function(k){
-        var n = PATIENTS.filter(function(pt){ return compute(pt).flags[k]; }).length;
-        return '<span class="chip">'+MARKERS[k].label+(n>0?'<span class="cn">'+n+'</span>':'')+'</span>';
-      }).join("");
-      var shown = flaggedPatients.slice(0,4);
-      var extra = flaggedPatients.length - shown.length;
-      var nameChips = shown.map(function(pt){ return '<button class="name-chip" data-id="'+pt.id+'">'+pt.name+'</button>'; }).join("")
-        + (extra>0 ? '<span class="name-chip more">+'+extra+' more</span>' : "");
-      return '<div class="panel-card '+tone+'">'+
-        '<div class="pc-head"><div class="pc-title-wrap"><div class="pc-icon">'+icon(p.icon,17)+'</div>'+
-        '<h3>'+p.title+'</h3></div>'+
-        ring(frac, TONE_COLOR[tone], 56, flaggedPatients.length, "/ "+PATIENTS.length)+
-        '</div>'+
-        '<div class="chip-row">'+markerChips+'</div>'+
-        '<div class="pc-foot"><div class="pc-foot-label">'+(flaggedPatients.length? "Flagged patients" : "No patients flagged")+'</div>'+
-        '<div class="name-chip-row">'+(nameChips || '<span style="color:var(--muted);font-size:11.5px;">None currently</span>')+'</div></div>'+
-      '</div>';
-    }).join("");
-    Array.prototype.forEach.call(document.querySelectorAll("#panelGrid .name-chip[data-id]"), function(btn){
-      btn.addEventListener("click", function(){ jumpToPatient(btn.getAttribute("data-id")); });
-    });
-  }
-
-  // ---------- disease cohorts view ----------
-  var COHORT_DEFS = [
-    { key:"injury", title:"Overreaching / Injury-Risk", icon:"bone", tone:"critical", panel:"Musculoskeletal & Inflammation",
-      markers:["ck","crp","ct"], plain:"Three muscle-and-inflammation markers rising together — classic overreaching." },
-    { key:"infection", title:"Infection / Illness Risk", icon:"shield", tone:"critical", panel:"Infection",
-      markers:["wbc","procalcitonin","crp"], plain:"White blood cells and procalcitonin climbing together — the body is fighting something." },
-    { key:"fatigue", title:"Fatigue & Recovery Risk", icon:"droplet", tone:"warning", panel:"Micronutrient & Recovery",
-      markers:["vitd","ferritin"], plain:"Vitamin D and iron stores both falling — recovery capacity is dropping." },
-    { key:"carotenoid", title:"Carotenoid Deficiency", icon:"pulse", tone:"info", panel:"Micronutrient & Recovery",
-      markers:["carotenoid"], plain:"Antioxidant levels low and falling — on its own for now." }
-  ];
-  function renderCohortGrid(){
-    var cards = COHORT_DEFS.map(function(def){
-      var matches = PATIENTS.filter(function(p){ return compute(p).cohort===def.key; });
-      var shown = matches.slice(0,4), extra = matches.length-shown.length;
-      var nameChips = shown.map(function(p){ return '<button class="name-chip" data-id="'+p.id+'">'+p.name+'</button>'; }).join("")
-        + (extra>0 ? '<span class="name-chip more">+'+extra+' more</span>' : "");
-      var matchIds = matches.map(function(p){ return p.id; });
-      var related = CROSS_COMBOS.filter(function(cd){
-        return PATIENTS.some(function(p){ return matchIds.indexOf(p.id)!==-1 && cd.matchFn(compute(p)); });
-      });
-      var relatedHtml = related.length
-        ? '<div class="cc-related"><span>Also seen with:</span>'+related.map(function(cd){ return '<span class="chip">'+cd.title+'</span>'; }).join("")+'</div>'
-        : "";
-      return '<div class="cohort-card '+def.tone+'">'+
-        '<div class="cc-head"><div class="cc-title-wrap"><div class="cc-icon">'+icon(def.icon,17)+'</div>'+
-        '<div><h3>'+def.title+'</h3><div class="cc-panel">'+def.panel+'</div></div></div></div>'+
-        '<div class="cc-stat"><span class="csv">'+matches.length+'</span><span class="csl">of '+PATIENTS.length+' patients</span></div>'+
-        '<div class="cc-trigger">'+def.plain+'</div>'+
-        '<div class="pc-foot"><div class="pc-foot-label">Matched patients</div>'+
-        '<div class="name-chip-row">'+(nameChips || '<span style="color:var(--muted);font-size:11.5px;">None currently</span>')+'</div></div>'+
-        relatedHtml+
-      '</div>';
-    }).join("") +
-      '<div class="cohort-card draft"><div class="cc-icon" style="background:var(--surface);color:var(--muted);margin-bottom:10px;">'+icon("target",18)+'</div>'+
-      '<h3 style="margin-bottom:6px;">Define a new cohort</h3>'+
-      '<p style="font-size:12px;color:var(--muted);max-width:28ch;margin:0 0 10px;">Pick markers, set trigger logic, validate against your own outcomes.</p>'+
-      '<span class="badge warning">Draft</span></div>';
-    document.getElementById("cohortGrid").innerHTML = cards;
-    Array.prototype.forEach.call(document.querySelectorAll("#cohortGrid .name-chip[data-id]"), function(btn){
-      btn.addEventListener("click", function(){ jumpToPatient(btn.getAttribute("data-id")); });
-    });
-  }
-
-  // ---------- predictive intelligence: composite signals ----------
-  function panelOf(key){ var found="—"; PANELS.forEach(function(pn){ if(pn.markers.indexOf(key)!==-1) found=pn.title; }); return found; }
-
-  var CROSS_COMBOS = [
-    { id:"muscle-vitd", title:"Delayed Muscle Repair Risk", legA:"ck", legB:"vitd", icon:"bone", tone:"critical",
-      insight:"Muscle is breaking down faster than it can repair.",
-      matchFn:function(c){ return c.flags.ck && c.flags.vitd; } },
-    { id:"overtrain-tsat", title:"Compounded Overtraining Load", legA:"ct", legB:"tsat", icon:"pulse", tone:"warning",
-      insight:"Hormonal strain is now limiting iron transport too.",
-      matchFn:function(c){ return c.flags.ct && c.flags.tsat; } },
-    { id:"preonset-infection", title:"Subclinical Infection — Pre-Onset", legA:"temp", legB:"crp", icon:"shield", tone:"critical",
-      insight:"The infection pattern, visible before the standard markers confirm it.",
-      matchFn:function(c){ return c.flags.temp && c.flags.crp; } },
-    { id:"iron-inflammation", title:"Iron-Limited Inflammatory Load", legA:"tsat", legB:"crp", icon:"droplet", tone:"warning",
-      insight:"Inflammation is suppressing iron availability.",
-      matchFn:function(c){ return c.flags.tsat && c.flags.crp; } }
-  ];
-
-  function renderComboGrid(){
-    var cards = CROSS_COMBOS.map(function(def){
-      var matches = PATIENTS.filter(function(p){ return def.matchFn(compute(p)); });
-      var shown = matches.slice(0,4), extra = matches.length-shown.length;
-      var nameChips = shown.map(function(p){ return '<button class="name-chip" data-id="'+p.id+'">'+p.name+'</button>'; }).join("")
-        + (extra>0 ? '<span class="name-chip more">+'+extra+' more</span>' : "");
-      return '<div class="cohort-card '+def.tone+'">'+
-        '<div class="cc-head"><div class="cc-title-wrap"><div class="cc-icon">'+icon(def.icon,17)+'</div>'+
-        '<h3>'+def.title+'</h3></div></div>'+
-        '<div class="cc-stat"><span class="csv">'+matches.length+'</span><span class="csl">of '+PATIENTS.length+' patients</span></div>'+
-        '<div class="leg-row"><span class="leg-pill">'+MARKERS[def.legA].label+'<em>'+panelOf(def.legA)+'</em></span>'+
-        '<span class="leg-plus">+</span><span class="leg-pill">'+MARKERS[def.legB].label+'<em>'+panelOf(def.legB)+'</em></span></div>'+
-        '<div class="cc-trigger">'+def.insight+'</div>'+
-        '<div class="pc-foot"><div class="pc-foot-label">Matched patients</div>'+
-        '<div class="name-chip-row">'+(nameChips || '<span style="color:var(--muted);font-size:11.5px;">None currently</span>')+'</div></div>'+
-      '</div>';
-    }).join("");
-    document.getElementById("comboGrid").innerHTML = cards;
-    Array.prototype.forEach.call(document.querySelectorAll("#comboGrid .name-chip[data-id]"), function(btn){
-      btn.addEventListener("click", function(){ jumpToPatient(btn.getAttribute("data-id")); });
-    });
-  }
-
-  // ---------- predictive intelligence: early-warning timeline ----------
-  var COHORT_SETS = {
-    injury:{ keys:["ck","crp","ct"], need:3 },
-    infection:{ keys:["wbc","procalcitonin"], need:2 },
-    fatigue:{ keys:["vitd","ferritin"], need:2 }
-  };
-  function flaggedAtWeek(key, series, w){
-    var m = MARKERS[key], cur = series[w];
-    var trendBad = m.bad==="high" ? cur>series[0] : cur<series[0];
-    var crossed = m.bad==="high" ? cur>=m.threshold : cur<=m.threshold;
-    return trendBad && crossed;
-  }
-  function cohortConfirmedWeek(cohortKey, patient){
-    var set = COHORT_SETS[cohortKey]; if(!set) return null;
-    var v = patient.values;
-    for(var w=0; w<4; w++){
-      var count = 0;
-      set.keys.forEach(function(k){ if(flaggedAtWeek(k, v[k], w)) count++; });
-      if(count>=set.need) return w+1;
-    }
-    return null;
-  }
-  // Prediction is made from report 1 and report 2 only — nothing later is used.
-  function predictFromFirstTwo(series, m){
-    var w1=series[0], w2=series[1];
-    var trendBad = m.bad==="high" ? w2>w1 : w2<w1;
-    if(!trendBad) return null;
-    var projectedWk4 = w1 + (w2-w1)*3;
-    var willCross = m.bad==="high" ? projectedWk4>=m.threshold : projectedWk4<=m.threshold;
-    if(!willCross) return null;
-    return projectedWk4;
-  }
-  function trajectoryChart(series, m, projectedWk4, confirmedWeek){
-    var W=220, H=84, padX=14, padY=10;
-    var vals = series.concat([m.threshold, projectedWk4]);
-    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
-    if(hi===lo){ hi = lo+1; }
-    function x(i){ return padX + i*((W-2*padX)/3); }
-    function y(v){ return H-padY - ((v-lo)/(hi-lo))*(H-2*padY); }
-    var thY = y(m.threshold).toFixed(1);
-    var zoneX = x(1).toFixed(1), zoneW = (x(3)-x(1)).toFixed(1);
-    var knownPts = [0,1].map(function(i){ return x(i).toFixed(1)+","+y(series[i]).toFixed(1); }).join(" ");
-    var actualPts = [1,2,3].map(function(i){ return x(i).toFixed(1)+","+y(series[i]).toFixed(1); }).join(" ");
-    var projLine = 'M '+x(1).toFixed(1)+' '+y(series[1]).toFixed(1)+' L '+x(3).toFixed(1)+' '+y(projectedWk4).toFixed(1);
-    var knownDots = [0,1].map(function(i){ return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(series[i]).toFixed(1)+'" r="3" fill="var(--accent)"/>'; }).join("");
-    var actualDots = [2,3].map(function(i){
-      var isConf = confirmedWeek===(i+1);
-      var r = isConf ? 4.5 : 3;
-      var fill = isConf ? "var(--critical)" : "var(--accent)";
-      return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(series[i]).toFixed(1)+'" r="'+r+'" fill="'+fill+'" opacity="'+(isConf?1:0.55)+'"/>';
-    }).join("");
-    var projDot = '<circle cx="'+x(3).toFixed(1)+'" cy="'+y(projectedWk4).toFixed(1)+'" r="4" fill="none" stroke="var(--warning)" stroke-width="2"/>';
-    return '<svg width="100%" height="'+H+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+m.label+' projected after report 2, checked against what actually happened">'+
-      '<rect x="'+zoneX+'" y="0" width="'+zoneW+'" height="'+H+'" fill="var(--warning)" opacity="0.07"/>'+
-      '<line x1="'+padX+'" y1="'+thY+'" x2="'+(W-padX)+'" y2="'+thY+'" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3"/>'+
-      '<polyline points="'+actualPts+'" fill="none" stroke="var(--accent)" stroke-width="1.6" opacity="0.35"/>'+
-      '<path d="'+projLine+'" fill="none" stroke="var(--warning)" stroke-width="2" stroke-dasharray="4 3"/>'+
-      '<polyline points="'+knownPts+'" fill="none" stroke="var(--accent)" stroke-width="2.2"/>'+
-      knownDots+actualDots+projDot+
-      '</svg>';
-  }
-  var MEDIANS = {};
-  function medianOf(key){
-    if(MEDIANS[key]!==undefined) return MEDIANS[key];
-    var vals = PATIENTS.map(function(p){ return p.values[key][0]; }).sort(function(a,b){ return a-b; });
-    var mid = Math.floor(vals.length/2);
-    MEDIANS[key] = vals.length%2 ? vals[mid] : (vals[mid-1]+vals[mid])/2;
-    return MEDIANS[key];
-  }
-  function badSide(key, v){ var m=MARKERS[key]; return m.bad==="high" ? v>medianOf(key) : v<medianOf(key); }
-  function earlyPattern(comboDef, patient){
-    var v = patient.values;
-    return badSide(comboDef.legA, v[comboDef.legA][0]) && badSide(comboDef.legB, v[comboDef.legB][0]);
-  }
-  function comboById(id){ var found=null; CROSS_COMBOS.forEach(function(d){ if(d.id===id) found=d; }); return found; }
-
-  var FEATURED_EARLY = [
-    { id:"ahmed", cohort:"injury", marker:"crp", comboId:"overtrain-tsat" },
-    { id:"omar", cohort:"infection", marker:"crp", comboId:"preonset-infection" },
-    { id:"faisal", cohort:"infection", marker:"crp", comboId:"preonset-infection" },
-    { id:"khalid", cohort:"injury", marker:"crp", comboId:"overtrain-tsat" }
-  ];
-  function renderPredictTimeline(){
-    var items = FEATURED_EARLY.map(function(f){
-      var p = byId(f.id), m = MARKERS[f.marker], series = p.values[f.marker];
-      var projected = predictFromFirstTwo(series, m);
-      var confirmed = cohortConfirmedWeek(f.cohort, p);
-      var lead = (projected!==null && confirmed) ? confirmed-2 : 0;
-      var combo = comboById(f.comboId);
-      var stage1 = earlyPattern(combo, p);
-      return { p:p, m:m, series:series, projected:projected, confirmed:confirmed, lead:lead, cohort:f.cohort, combo:combo, stage1:stage1 };
-    }).filter(function(x){ return x.projected!==null && x.confirmed; }).sort(function(a,b){ return b.lead-a.lead; });
-    var html = items.map(function(it){
-      var ladder = '<div class="conf-ladder">'+
-        '<div class="cl-step '+(it.stage1?"hit":"")+'"><span class="cl-dot">1</span><span class="cl-label">'+(it.stage1?"early pattern":"not yet")+'</span></div>'+
-        '<div class="cl-line '+(it.stage1?"hit":"")+'"></div>'+
-        '<div class="cl-step hit"><span class="cl-dot">2</span><span class="cl-label">trend confirmed</span></div>'+
-        '<div class="cl-line hit"></div>'+
-        '<div class="cl-step hit final"><span class="cl-dot">'+it.confirmed+'</span><span class="cl-label">confirmed</span></div>'+
-      '</div>';
-      return '<div class="predict-card">'+
-        '<div class="pt-head"><div><b>'+it.p.name+'</b><span class="pt-sport">'+it.p.sport+'</span></div>'+
-        '<span class="badge '+COHORT_TONE[it.cohort]+'">'+COHORT_LABEL[it.cohort]+'</span></div>'+
-        '<div class="pt-marker">Watching: '+it.m.label+'</div>'+
-        trajectoryChart(it.series, it.m, it.projected, it.confirmed)+
-        '<div class="pt-weeks">'+WEEKS.map(function(w){ return '<span>'+w+'</span>'; }).join("")+'</div>'+
-        ladder+
-        '<div class="pt-lead"><span class="pt-lead-text">Called at report 2, proven right by report '+it.confirmed+' &mdash; <b>'+it.lead+' report'+(it.lead>1?"s":"")+' sooner</b> than waiting for all four.</span></div>'+
-      '</div>';
-    }).join("");
-    document.getElementById("predictTimeline").innerHTML = html;
-  }
-
-  // ---------- overview-style flow (used nowhere else now, kept for population dashboard caption) ----------
-
-  // ---------- reference ranges ----------
-  var RANGES = {
-    vitd: { label:"Vitamin D (25-OH)", unit:"ng/mL", scaleMax:110,
-      standard:{ low:20, high:100, n:"general population" }, cohort:{ low:32, high:65, n:"n=142 · athlete cohort" }, example:26 },
-    ferritin: { label:"Ferritin", unit:"ng/mL", scaleMax:220,
-      standard:{ low:20, high:200, n:"general population" }, cohort:{ low:35, high:150, n:"n=118 · athlete cohort" }, example:28 }
-  };
-  var rrActive = "vitd";
-  function pct(v, max){ return Math.max(0, Math.min(100,(v/max)*100)); }
-  function renderRangeCompare(){
-    var r = RANGES[rrActive], max = r.scaleMax;
-    var standardFlag = r.example < r.standard.low || r.example > r.standard.high;
-    var cohortFlag = r.example < r.cohort.low || r.example > r.cohort.high;
-    function band(cls, low, high){ var l=pct(low,max), w=pct(high,max)-pct(low,max); return '<div class="rr-band '+cls+'" style="left:'+l.toFixed(1)+'%;width:'+w.toFixed(1)+'%"></div>'; }
-    function mark(){ var x=pct(r.example,max); return '<div class="rr-mark" style="left:'+x.toFixed(1)+'%"><span>'+r.example+' '+r.unit+'</span></div>'; }
-    var html = ''+
-      '<div class="rr-row"><div class="rr-label"><span><b>Standard lab range</b></span><span>'+r.standard.n+'</span></div>'+
-      '<div class="rr-track">'+band("standard",r.standard.low,r.standard.high)+mark()+'</div></div>'+
-      '<div class="rr-row"><div class="rr-label"><span><b>Burak cohort range</b></span><span>'+r.cohort.n+'</span></div>'+
-      '<div class="rr-track">'+band("cohort",r.cohort.low,r.cohort.high)+mark()+'</div></div>'+
-      '<div class="rr-callout"><b>'+(standardFlag?"Flagged":"Reads normal")+'</b> on the standard range, but <b>'+(cohortFlag?"flagged":"reads normal")+'</b> on the Burak cohort range — same reading, different verdict.</div>';
-    document.getElementById("rrBody").innerHTML = html;
-  }
-  function renderRangeTabs(){
-    var el = document.getElementById("rrTabs");
-    el.innerHTML = Object.keys(RANGES).map(function(k){ return '<button class="'+(k===rrActive?"active":"")+'" data-k="'+k+'">'+RANGES[k].label+'</button>'; }).join("");
-    Array.prototype.forEach.call(el.querySelectorAll("button"), function(btn){
-      btn.addEventListener("click", function(){ rrActive = btn.getAttribute("data-k"); renderRangeTabs(); renderRangeCompare(); });
-    });
-  }
-
-  // ---------- nav ----------
-  var VIEWS = ["ingestion","population","split","predict","ranges","cohorts","batch","single"];
-  var sbNav = document.getElementById("sbNav");
-  function setView(v){
-    VIEWS.forEach(function(id){ document.getElementById("view-"+id).hidden = (id!==v); });
-    Array.prototype.forEach.call(sbNav.querySelectorAll(".sb-item"), function(b){ b.classList.toggle("active", b.getAttribute("data-view")===v); });
-  }
-  Array.prototype.forEach.call(sbNav.querySelectorAll(".sb-item"), function(b){ b.addEventListener("click", function(){ setView(b.getAttribute("data-view")); }); });
-
-  // ---------- batch ----------
-  var containersEl = document.getElementById("containers");
-  var batchMetaEl = document.getElementById("batchMeta");
-  var scanBtn = document.getElementById("scanBtn");
-  var scanLabel = document.getElementById("scanLabel");
-  var batchStatusEl = document.getElementById("batchStatus");
-  var batchStatusText = document.getElementById("batchStatusText");
-  var sorted = false;
-
-  var CONTAINERS = [
-    { id:"injury", title:"Injury / Inflammation", dot:"var(--critical)" },
-    { id:"infection", title:"Infection", dot:"var(--critical)" },
-    { id:"vitaminD", title:"Vitamin D deficiency", dot:"var(--warning)" },
-    { id:"carotenoid", title:"Carotenoid deficiency", dot:"var(--info)" },
-    { id:"clear", title:"No deficiency flagged", dot:"var(--good)" }
-  ];
-  function metricLine(patient, group){
-    var v = patient.values;
-    if(group==="injury") return "CK "+v.ck[3]+" ↑ · CRP "+v.crp[3]+" ↑";
-    if(group==="infection") return "WBC "+v.wbc[3]+" ↑ · PCT "+v.procalcitonin[3]+" ↑";
-    if(group==="vitaminD") return "Vitamin D "+v.vitd[3]+" ↓";
-    if(group==="carotenoid") return "Carotenoids "+v.carotenoid[3]+" ↓";
-    return "In range";
-  }
-  function renderContainers(){
-    containersEl.innerHTML = CONTAINERS.map(function(cont){
-      var members = PATIENTS.filter(function(p){ return triage(p)===cont.id; });
-      return '<div class="container" id="cont-'+cont.id+'">'+
-        '<div class="c-head"><span class="c-dot" style="background:'+cont.dot+'"></span><span class="c-title">'+cont.title+'</span><span class="c-count">'+members.length+'</span></div>'+
-        (members.length ? members.map(function(p){
-          return '<button class="patient-btn" data-id="'+p.id+'"><div class="pn">'+p.name+'</div><div class="pm">'+p.meta+'</div><div class="pv">'+metricLine(p,cont.id)+'</div></button>';
-        }).join("") : '<div class="c-empty">None</div>')+
-      '</div>';
-    }).join("");
-    Array.prototype.forEach.call(containersEl.querySelectorAll(".patient-btn"), function(btn){
-      btn.addEventListener("click", function(){
-        activeId = btn.getAttribute("data-id");
-        setView("single");
-        renderTabs(); renderMeta(); buildPipeline();
-        setTimeout(runPipeline, 150);
-      });
-    });
-  }
-  function scanBatch(){
-    if(sorted){
-      sorted = false; containersEl.innerHTML = "";
-      batchMetaEl.textContent = "20 patients queued."; scanLabel.textContent = "Scan batch";
-      batchStatusEl.classList.remove("done"); batchStatusText.textContent = "Waiting to scan.";
-      return;
-    }
-    scanBtn.disabled = true; scanLabel.textContent = "Reading…"; batchStatusEl.classList.remove("done");
-    var idx=0;
-    function readStep(){
-      if(idx<PATIENTS.length){ batchStatusText.textContent = "Reading "+PATIENTS[idx].name+"…"; idx++; setTimeout(readStep,70); }
-      else { batchStatusText.textContent = "Comparing markers…"; setTimeout(sortStep,260); }
-    }
-    function sortStep(){
-      scanLabel.textContent = "Sorting…"; renderContainers();
-      var cards = containersEl.querySelectorAll(".container"); var i=0;
-      function step(){
-        if(i<cards.length){ cards[i].classList.add("visible"); batchStatusText.textContent = "Filed into "+CONTAINERS[i].title+"."; i++; setTimeout(step,160); }
-        else {
-          sorted = true; scanBtn.disabled=false; scanLabel.textContent="Re-sort"; batchStatusEl.classList.add("done");
-          var counts = CONTAINERS.map(function(c){ return c.title+": "+PATIENTS.filter(function(p){return triage(p)===c.id;}).length; });
-          batchStatusText.textContent = "Done — "+counts.join("  ·  ");
-          batchMetaEl.textContent = "Select any patient to see why.";
-        }
-      }
-      step();
-    }
-    readStep();
-  }
-  scanBtn.addEventListener("click", scanBatch);
-
-  // ---------- single patient ----------
-  var activeId = "ahmed", pipelineRunning = false;
-  var tabsEl = document.getElementById("tabs");
-  var metaEl = document.getElementById("patientMeta");
-  var pipelineEl = document.getElementById("pipeline");
-  var runBtn = document.getElementById("runBtn");
-  var runLabel = document.getElementById("runLabel");
-  var singleStatusEl = document.getElementById("singleStatus");
-  var singleStatusText = document.getElementById("singleStatusText");
-
-  function renderTabs(){
-    tabsEl.innerHTML = FEATURED_IDS.map(function(id){
-      var p = byId(id);
-      return '<button class="tab'+(id===activeId?' active':'')+'" data-id="'+id+'">'+p.name+'</button>';
-    }).join("");
-    Array.prototype.forEach.call(tabsEl.querySelectorAll(".tab"), function(btn){
-      btn.addEventListener("click", function(){
-        if(pipelineRunning) return;
-        activeId = btn.getAttribute("data-id");
-        renderTabs(); renderMeta(); buildPipeline();
-      });
-    });
-  }
-  function renderMeta(){
-    var p = byId(activeId);
-    var fromList = FEATURED_IDS.indexOf(activeId)===-1;
-    metaEl.innerHTML = '<b>'+p.name+'</b> — '+p.sport+', '+p.meta.split(" · ")[1] + (fromList ? '  ·  <a id="backToList">back</a>' : '');
-    var back = document.getElementById("backToList");
-    if(back) back.addEventListener("click", function(){ setView("population"); });
-  }
-  function buildPipeline(){
-    var p = byId(activeId); var c = compute(p);
-    pipelineEl.innerHTML = LAYERS.map(function(L,i){
-      return '<div class="layer" id="layer-'+L.id+'"><div class="layer-head"><div class="layer-n">'+(i+1)+'</div><h3>'+L.title+'</h3></div>'+
-        '<p class="layer-sub">'+L.sub+'</p><div class="layer-body">'+L.build(p,c)+'</div></div>';
-    }).join("");
-    runLabel.textContent = "Run pipeline";
-    singleStatusEl.classList.remove("done");
-    singleStatusText.textContent = 'Press run to move '+p.name+'’s results through every layer.';
-  }
-  function runPipeline(){
-    if(pipelineRunning) return;
-    pipelineRunning = true; runBtn.disabled = true; runLabel.textContent = "Running…"; singleStatusEl.classList.remove("done");
-    var layers = pipelineEl.querySelectorAll(".layer");
-    Array.prototype.forEach.call(layers, function(el){ el.classList.remove("visible"); });
-    var i=0;
-    function step(){
-      if(i<layers.length){
-        layers[i].classList.add("visible");
-        singleStatusText.textContent = "Step "+(i+1)+" of "+layers.length+" — "+LAYERS[i].title;
-        layers[i].scrollIntoView({behavior:"smooth", block:"center"});
-        i++; setTimeout(step,420);
-      } else {
-        pipelineRunning=false; runBtn.disabled=false; runLabel.textContent="Re-run";
-        singleStatusEl.classList.add("done"); singleStatusText.textContent = "Done.";
-      }
-    }
-    setTimeout(step,120);
-  }
-  runBtn.addEventListener("click", runPipeline);
-
-  // ---------- boot ----------
-  renderPopulation();
-  renderPanelGrid();
-  renderCohortGrid();
-  renderComboGrid();
-  renderPredictTimeline();
-  renderRangeTabs(); renderRangeCompare();
-  setView("ingestion");
-  renderTabs(); renderMeta(); buildPipeline();
-})();
+function pOverview(){const live=BOXES.filter(b=>b.status!=='off'),used=live.reduce((a,b)=>a+b.used,0),need=live.reduce((a,b)=>a+b.need,0),over=live.reduce((a,b)=>a+Math.max(0,b.used-b.need),0),open=EVENTS.filter(e=>!e.st[1].startsWith('Closed')).length;
+ return head('Wonder Box · Burak Cloud','Water you can finally see','Every litre pumped through a Wonder Box manifold gets a record: how much, how clean, from which source, and whether the crop needed it.')+
+ `<div class="kpis">
+  <div class="kpi" style="--kc:var(--accent)"><small>Boxes live</small><b class="num">${live.length}<em>of ${BOXES.length}</em></b><span>1 offline, last seen 6 h ago</span></div>
+  <div class="kpi" style="--kc:var(--blue)"><small>Water pumped today</small><b class="num">${fmt(used,0)}<em>m³</em></b><span>crop need ${fmt(need,0)} m³</span></div>
+  <div class="kpi" style="--kc:var(--saffron)"><small>Over-watering today</small><b class="num">${fmt(over,0)}<em>m³</em></b><span>${Math.round(over/used*100)}% of all water pumped</span></div>
+  <div class="kpi" style="--kc:var(--crit)"><small>Open water events</small><b class="num">${open}</b><span>1 needs action now</span></div>
+  <div class="kpi" style="--kc:var(--violet)"><small>Lab tests pending</small><b class="num">${LAB.filter(l=>!l.st[1].startsWith('Result')).length}</b><span>at SKUAST-K lab</span></div>
+ </div>
+ <section class="panel"><h3>How a litre becomes a decision</h3><p class="sub">The same Burak pipeline that reads a sheep's blood, reading a field's water. Counts are for today.</p>
+  <div class="pipe">${[['1','Capture','Wonder Box sensors read every 15 minutes, on solar, offline-safe','1,632 readings','var(--accent)'],['2','Check','Faulty sensors, impossible values and gaps caught at entry','14 rejected','var(--saffron)'],['3','Store','Sealed record tied to box, source, farm and crop','1,618 sealed','var(--blue)'],['4','Analyse','Crop need, water health score and named water events','4 events','var(--crit)'],['5','Publish','Advisories and maps pushed to SKUAST-K’s platform','62 records sent','var(--good)']].map(s=>`<div class="st" style="--sc:${s[4]}"><span class="n">${s[0]}</span><b>${s[1]}</b><small>${s[2]}</small><div class="v num">${s[3]}</div></div>`).join('')}</div></section>
+ <div class="grid g3">
+  <section class="panel"><h3>Pilot sites</h3><p class="sub">Each chip is one Wonder Box. Select one to open it.</p>
+   <div class="sites">${SITES.map(s=>`<div class="site"><h4>${s.n}</h4><p>${s.c} · ${s.d}</p><div class="boxes">${BOXES.filter(b=>b.k===s.k).map(b=>`<button class="bx ${b.status==='ok'?'':b.status}" type="button" data-box="${b.id}">${b.id.slice(3)}</button>`).join('')}</div></div>`).join('')}</div></section>
+  <section class="panel"><h3>Latest water events</h3><p class="sub">Named when several readings move together.</p>
+   <div class="evs">${EVENTS.slice(0,3).map(evRow).join('')}</div></section>
+ </div>`;}
+function evRow(e){const E=EVT[e.k];return `<div class="ev" style="--ec:${E.c}"><span class="bar"></span><div><h4>${E.n} · <span class="mono" style="font-weight:500">${e.box}</span></h4><p>${e.note}</p><div class="tr">${E.tr.map(t=>`<span>${t}</span>`).join('')}</div></div><div class="meta"><span class="pill ${e.st[0]}">${e.st[1]}</span><span class="mono">${e.id}</span><span>${e.when}</span></div></div>`;}
+function pBoxes(){const b=BOXES.find(x=>x.id===sel);
+ const rows=BOXES.map(x=>`<tr data-box="${x.id}" aria-selected="${x.id===sel}"><td class="mono">${x.id}</td><td>${x.site.n}</td><td>${x.crop}</td><td>${srcCell(x.src)}</td><td>${statPill(x)}</td><td class="r">${x.status==='off'?'—':pctUse(x)+'%'}</td><td class="r">${x.status==='off'?'—':x.ec}</td><td class="r">${x.status==='off'?'—':x.ph}</td><td class="r">${x.status==='off'?'—':x.turb}</td><td>${scoreCell(x)}</td><td class="r" style="color:var(--ink3)">${x.sync}</td></tr>`).join('');
+ return head('Fleet','Wonder Boxes','18 manifolds across three pilot sites. Select a row to see that box in detail.')+
+ `<section class="panel" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr><th>Box</th><th>Site</th><th>Crop</th><th>Source</th><th>Status</th><th class="r">Use vs need</th><th class="r">EC µS/cm</th><th class="r">pH</th><th class="r">NTU</th><th>Water health</th><th class="r">Last sync</th></tr></thead><tbody>${rows}</tbody></table></div></section>
+ ${boxDetail(b)}`;}
+function boxDetail(b){if(b.status==='off')return `<section class="panel"><h3>${b.id} is offline</h3><p class="sub">Last seen 6 hours ago. Data is stored in the box and will sync when signal returns.</p></section>`;
+ const R2=k=>RANGES[k];const sp={ec:series(b.ec*.85,60,24,b.ev==='runoff'?260:b.ev==='overpump'?120:0),ph:series(b.ph,.25),turb:series(Math.max(.5,b.turb*.4),1.2,24,b.ev==='runoff'?9:b.ev==='contam'?2:0),press:series(b.press+.3,.25,24,b.ev==='overpump'?-1:0),temp:series(b.temp,1.5)};
+ const card=(k,v)=>{const [lo,hi,u,n]=R2(k),s=stOf(v,[lo,hi]);return `<div class="rd2 ${s}"><small>${n}</small><b class="num">${v}<em>${u}</em></b><span>normal ${lo}–${hi} ${u}</span>${spark(sp[k],s==='out'?'var(--crit)':s==='watch'?'var(--warn)':'var(--accent)')}</div>`;};
+ const days=['11','12','13','14','15','16','17'],nd=days.map((_,i)=>+(b.need*(0.85+0.3*Math.sin(i))).toFixed(1)),us=days.map((_,i)=>+(i===6?b.used:nd[i]*(0.9+R()*(b.ev==='overpump'?0.8:0.35))).toFixed(1)),mx=Math.max(...nd,...us)*1.1;
+ const W=520,H=170,L=34,bw=(W-L-10)/7;const Y=v=>H-24-(v/mx)*(H-44);
+ let bars=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Water used versus crop need, last 7 days">`;[0,.5,1].forEach(t=>{const v=mx*t;bars+=`<line x1="${L}" x2="${W-6}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="10" fill="var(--ink3)">${fmt(v,0)}</text>`;});
+ days.forEach((d,i)=>{const x=L+i*bw+bw*.18,w=bw*.64,over=us[i]>nd[i]*1.15,under=us[i]<nd[i]*.7;bars+=`<rect x="${x}" y="${Y(us[i])}" width="${w}" height="${H-24-Y(us[i])}" rx="4" fill="${over?'var(--warn)':under?'var(--blue)':'var(--accent)'}" fill-opacity=".85"/><line x1="${x-3}" x2="${x+w+3}" y1="${Y(nd[i])}" y2="${Y(nd[i])}" stroke="var(--ink)" stroke-width="2"/><text x="${x+w/2}" y="${H-8}" text-anchor="middle" font-size="10.5" fill="var(--ink2)">${d} Oct</text>`;});bars+='</svg>';
+ const evs=EVENTS.filter(e=>e.box===b.id);
+ return `<div class="det">
+  <section class="panel"><h3>${b.id} · readings, last 24 hours</h3><p class="sub">${b.site.n} · ${b.crop} · ${b.src} source. Each reading is compared with this source's own normal.</p>
+   <div class="reads">${card('ec',b.ec)}${card('ph',b.ph)}${card('turb',b.turb)}${card('press',b.press)}${card('temp',b.temp)}<div class="rd2"><small>Flow today</small><b class="num">${b.used}<em>m³</em></b><span>crop need ${b.need} m³</span><span style="margin-top:6px;font-weight:600;color:${pctUse(b)>130?'var(--warn)':pctUse(b)<70?'var(--blue)':'var(--good)'}">${pctUse(b)}% of need</span></div></div></section>
+  <section class="panel"><h3>Water used against crop need</h3><p class="sub">Bars: water that flowed. Black line: what the crop needed (weather and crop stage).</p>${bars}
+   <p class="note">Amber bar: more than 15% over need. Blue bar: less than 70% of need.</p></section>
+  <section class="panel"><h3>Water source record</h3><p class="sub">The passport for this source.</p>
+   <dl class="kv"><dt>Source</dt><dd>${b.src}</dd><dt>Serves</dt><dd>${b.crop}, ${b.k==='PMP'?'2.1 ha':'1.6 ha'}</dd><dt>Water health score</dt><dd>${b.score} of 100</dd><dt>Source normal (EC)</dt><dd>${Math.round(b.ec*.82)} µS/cm</dd><dt>Last lab test</dt><dd>${b.id==='WB-SHP-03'?'Sample collected today':'1 Oct · none detected'}</dd><dt>Manifold</dt><dd>4 outlets · valve log on</dd><dt>Power</dt><dd>Solar · battery 87%</dd></dl></section>
+  <section class="panel"><h3>Events at this box</h3><p class="sub">${evs.length?'Named water events, newest first.':'No events in the last 30 days.'}</p><div class="evs">${evs.map(evRow).join('')||'<p class="note">This source is behaving normally.</p>'}</div></section>
+ </div>`;}
+function pEvents(){return head('Analyse','Water events','An event is named when several readings move in the same direction, the way Burak Ovine names a disease from a sheep’s blood.')+
+ `<section class="panel"><h3>Open and recent</h3><p class="sub">Newest first.</p><div class="evs">${EVENTS.map(evRow).join('')}</div></section>
+ <section class="panel"><h3>The five named events</h3><p class="sub">The rules behind each one. Sensors flag; the lab confirms anything chemical.</p><div class="rules">${Object.values(EVT).map(E=>`<div class="rule" style="--ec:${E.c}"><b><i></i>${E.n}</b><p>${E.rule}</p></div>`).join('')}</div></section>`;}
+function pLab(){return head('Confirm','Lab queue','Sensors can’t see pesticides. When an event needs it, and once a month as routine, SKUAST-K’s lab tests a sample and the result is written back to the box.')+
+ `<section class="panel" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr><th>Sample</th><th>Box</th><th>Reason</th><th>Sent</th><th>Test</th><th>Status</th><th>Result</th></tr></thead><tbody>${LAB.map(l=>`<tr data-box="${l.box}"><td class="mono">${l.s}</td><td class="mono">${l.box}</td><td>${l.ev}</td><td>${l.sent}</td><td>${l.test}</td><td><span class="pill ${l.st[0]}">${l.st[1]}</span></td><td>${l.res}</td></tr>`).join('')}</tbody></table></div></section>
+ <p class="note">Lab results feed back into the model, so the next contamination watch is sharper.</p>`;}
+function pModel(){return head('How it thinks','The model','Three simple pieces, each one explainable to a farmer and defensible to a scientist.')+
+ `<div class="steps">
+  <div><b>1 · Water need</b><p>How much the crop needed today, from weather and crop stage. The standard FAO crop-water method agronomists already use.</p><div class="f">need = ET0 × Kc − effective rain</div></div>
+  <div><b>2 · Water health score</b><p>Each reading compared with that source’s own normal, so a spring and a borewell are each judged fairly.</p><div class="f">z = (reading − source normal) ÷ spread</div></div>
+  <div><b>3 · Named events</b><p>When two or more readings move together in a known pattern, the event is named and the right person is told.</p><div class="f">event = pattern match + timing</div></div>
+ </div>
+ <section class="panel"><h3>What each reading tells us</h3><p class="sub">Low-cost sensors in the Wonder Box manifold.</p>
+  <div class="tw"><table><thead><tr><th>Reading</th><th>Normal range</th><th>A rise or fall means</th></tr></thead><tbody>
+  <tr><td>Flow</td><td>Set by crop need</td><td>Over- or under-watering; leaks at night</td></tr>
+  <tr><td>Pressure</td><td>1.5–3.0 bar</td><td>Pump strain, over-pumping, blocked outlets</td></tr>
+  <tr><td>Salts (EC)</td><td>150–700 µS/cm</td><td>Runoff, mineral build-up, a borewell drawn too hard</td></tr>
+  <tr><td>pH</td><td>6.5–8.0</td><td>Water that can harm soil and roots</td></tr>
+  <tr><td>Cloudiness (turbidity)</td><td>0–5 NTU</td><td>Silt and runoff after rain or spraying</td></tr>
+  <tr><td>Water temperature</td><td>Season-dependent</td><td>Context for the other readings</td></tr></tbody></table></div>
+  <p class="note" style="margin-top:10px">Ranges are working values for the pilot, to be set with SKUAST-K for each source.</p></section>`;}
+let SHARE={sum:true,ev:true,adv:true,raw:false,lab:true};
+function pLink(){return head('Publish','SKUAST-K link','Burak Cloud does the capture, checking and analysis. SKUAST-K’s platform publishes the results under its own name. You choose exactly what crosses.','<button class="btn pri" type="button" id="pushNow">Send now</button>')+
+ `<section class="panel"><h3>Connection</h3><p class="sub">A secure data link from Burak Cloud to SKUAST-K’s software.</p>
+  <div class="link"><div class="end"><b>Burak Cloud</b><small>Wonder Box pipeline · Burak owns the platform</small></div><div class="wire" aria-hidden="true"></div><div class="end"><b>SKUAST-K platform</b><small>Publishes advisories, maps and research · SKUAST-K owns the data</small></div></div></section>
+ <div class="grid g2">
+  <section class="panel"><h3>What we share</h3><p class="sub">Each switch controls one kind of record.</p><div class="tog">
+   ${[['sum','Daily summaries','Use vs need and water health score, per box per day'],['ev','Water events','Every named event and its status'],['adv','Farmer advisories','Irrigate, wait or warn, ready to publish'],['lab','Lab results','Pesticide and nitrate results from SKUAST-K’s own lab'],['raw','Raw sensor readings','Every 15-minute reading (large; off by default)']].map(t=>`<label><input type="checkbox" id="sh-${t[0]}" data-sh="${t[0]}" ${SHARE[t[0]]?'checked':''}><span>${t[1]}<small>${t[2]}</small></span></label>`).join('')}
+  </div></section>
+  <section class="panel"><h3>Sent today</h3><p class="sub">Every send is fingerprinted, so both sides can audit it.</p>
+   <div class="log" id="log">${[['09:00','Daily summaries · 17 boxes','62 records'],['06:52','Event E-1042 · Runoff','1 record'],['06:52','Advisory · Shopian growers: avoid WB-SHP-03 source','1 record'],['Yesterday','Event E-1041 · Over-pumping','1 record']].map(r=>`<div><span class="mono">${r[0]}</span><span>${r[1]}</span><span style="color:var(--ink3)">${r[2]}</span></div>`).join('')}</div></section>
+ </div>
+ <section class="panel"><h3>What a record looks like</h3><p class="sub">One daily summary, as SKUAST-K’s software receives it.</p>
+ <div class="code">{
+  "box": "WB-SHP-03",
+  "site": "Shopian",  "crop": "apple, high-density",  "source": "spring",
+  "date": "2026-10-17",
+  "water_m3": { "used": ${BOXES[2].used}, "need": ${BOXES[2].need} },
+  "water_health": ${BOXES[2].score},
+  "readings": { "ec_uS_cm": 812, "ph": ${BOXES[2].ph}, "turbidity_ntu": 11.8, "pressure_bar": ${BOXES[2].press} },
+  "events": ["E-1042 runoff"],
+  "lab": "S-2207 collected",
+  "fingerprint": "b7e1…9c2a",
+  "simulated": true
+}</div></section>`;}
+const R_={ov:pOverview,boxes:pBoxes,events:pEvents,lab:pLab,model:pModel,link:pLink};
+function render(){$('#nav').innerHTML=navHTML();$('#view').innerHTML=R_[page]();$('#crumb').innerHTML=`Wonder Box / <b>${PAGES.find(p=>p[0]===page)[1]}</b>`;}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600);}
+document.addEventListener('click',e=>{const n=e.target.closest('[data-p]');if(n){page=n.dataset.p;render();window.scrollTo({top:0});return;}
+ const b=e.target.closest('[data-box]');if(b){sel=b.dataset.box;page='boxes';render();const d=document.querySelector('.det');if(d&&e.target.closest('.bx,#view tbody tr'))d.scrollIntoView({behavior:'smooth',block:'start'});return;}
+ const tz=e.target.closest('[data-toast]');if(tz){toast(tz.dataset.toast);return;}
+ if(e.target.id==='pushNow'){const on=Object.entries(SHARE).filter(([,v])=>v).length;const lg=$('#log');lg.insertAdjacentHTML('afterbegin',`<div><span class="mono">${new Date().toTimeString().slice(0,5)}</span><span>Manual send · ${on} record types</span><span style="color:var(--ink3)">queued</span></div>`);toast('Sent to SKUAST-K. They’ll see it on their platform.');}
+ if(e.target.id==='themeBtn'){const r=document.documentElement,cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';}});
+document.addEventListener('change',e=>{const s=e.target.dataset.sh;if(s){SHARE[s]=e.target.checked;toast(`${e.target.closest('label').querySelector('span').firstChild.textContent.trim()} ${e.target.checked?'will be shared':'will not be shared'}.`);}});
+render();
 </script>
+
+</body>
+</html>
